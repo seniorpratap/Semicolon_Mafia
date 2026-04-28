@@ -8,6 +8,7 @@ import AgentPanel from './components/AgentPanel';
 import DecisionLog from './components/DecisionLog';
 import ZoneDetail from './components/ZoneDetail';
 import ResizeHandle from './components/ResizeHandle';
+import CrisisGuidelines from './components/CrisisGuidelines';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
@@ -310,8 +311,8 @@ export default function App() {
           </div>
 
           {/* Tabs */}
-          {['DASHBOARD', 'DECISION LOG'].map(tab => {
-            const id = tab === 'DASHBOARD' ? 'dashboard' : 'decisions';
+          {['DASHBOARD', 'DECISION LOG', 'GUIDELINES'].map(tab => {
+            const id = tab === 'DASHBOARD' ? 'dashboard' : tab === 'DECISION LOG' ? 'decisions' : 'guidelines';
             const active = activeTab === id;
             return (
               <button key={id} onClick={() => setActiveTab(id)}
@@ -610,9 +611,13 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
-      ) : (
+      ) : activeTab === 'decisions' ? (
         <main className="flex-1 min-h-0 overflow-y-auto scroll-y p-6">
           <DecisionLog debates={debates} />
+        </main>
+      ) : (
+        <main className="flex-1 min-h-0 overflow-y-auto scroll-y">
+          <CrisisGuidelines />
         </main>
       )}
 

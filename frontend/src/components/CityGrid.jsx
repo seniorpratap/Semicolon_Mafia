@@ -99,18 +99,6 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
             <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: 'var(--t-muted)' }}>{l}</span>
           </div>
         ))}
-        <div className="flex items-center gap-1 ml-auto">
-          <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{ background: '#ef4444', color: '#fff', lineHeight: '14px' }}>🔒F</span>
-          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>FULL</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{ background: '#f59e0b', color: '#fff', lineHeight: '14px' }}>🔒P</span>
-          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>PART</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8b5cf6' }} />
-          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>VAX</span>
-        </div>
       </div>
     </div>
   );

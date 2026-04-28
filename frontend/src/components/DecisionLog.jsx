@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Clock, MessageSquare, Shield, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, MessageSquare, Shield, FileText, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import { AGENTS } from '../engine/agents';
 
@@ -8,32 +8,35 @@ export default function DecisionLog({ debates }) {
 
   if (!debates || debates.length === 0) {
     return (
-      <div className="bento p-6">
-        <div className="flex items-center gap-3 mb-6 border-b border-color-primary pb-2" style={{borderColor: 'var(--border-color)'}}>
-          <FileText size={16} className="text-primary" />
-          <h3 className="text-xs font-mono font-bold text-primary uppercase tracking-widest">ACTION REPORT ARCHIVE</h3>
+      <div className="card p-8">
+        <div className="flex items-center gap-3 mb-8 border-b border-border-color pb-4">
+          <FileText size={24} className="text-navy" />
+          <h2 className="text-xl font-bold text-navy">Decision History</h2>
         </div>
-        <div className="flex flex-col items-center justify-center py-16" style={{opacity: 0.5}}>
-          <FileText size={32} className="text-primary mb-4 animate-pulse" />
-          <p className="text-[10px] font-mono text-muted text-center tracking-widest uppercase">
-            NO RECORDS FOUND.<br/>ARCHIVE WILL POPULATE DURING SIMULATION RUN.
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 text-muted">
+          <div className="w-16 h-16 bg-main rounded-full flex items-center justify-center mb-4">
+            <FileText size={32} className="text-muted opacity-50" />
+          </div>
+          <h3 className="text-lg font-semibold text-navy mb-2">No Records Found</h3>
+          <p className="text-sm">Action logs will appear here once the simulation starts generating decisions.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bento p-6">
-      <div className="flex items-center justify-between mb-6 border-b border-color-primary pb-2" style={{borderColor: 'var(--border-color)'}}>
+    <div className="card p-8">
+      <div className="flex items-center justify-between mb-8 border-b border-border-color pb-4">
         <div className="flex items-center gap-3">
-          <FileText size={16} className="text-primary" />
-          <h3 className="text-xs font-mono font-bold text-primary uppercase tracking-widest">ACTION REPORT ARCHIVE</h3>
+          <FileText size={24} className="text-navy" />
+          <h2 className="text-xl font-bold text-navy">Decision History</h2>
         </div>
-        <span className="text-[10px] text-muted font-mono tracking-widest uppercase">RECORDS: {debates.length}</span>
+        <div className="badge bg-main text-muted border border-border-color">
+          {debates.length} Records
+        </div>
       </div>
 
-      <div style={{maxHeight: 'calc(100vh - 220px)'}} className="overflow-y-auto space-y-3 pr-2">
+      <div style={{maxHeight: 'calc(100vh - 240px)'}} className="overflow-y-auto space-y-4 pr-4">
         {[...debates].reverse().map((debate, index) => {
           const realIndex = debates.length - 1 - index;
           const isExpanded = expandedId === realIndex;
@@ -41,39 +44,40 @@ export default function DecisionLog({ debates }) {
           return (
             <motion.div
               key={realIndex}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              style={{background: 'var(--bg-core)', border: '1px solid var(--border-color)', position: 'relative'}}
+              className="border border-border-color rounded-lg overflow-hidden bg-surface transition-shadow hover:shadow-sm"
             >
-              <div style={{position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', background: isExpanded ? 'var(--color-primary)' : 'var(--color-primary-dim)'}} />
-              
               {/* Collapsed Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : realIndex)}
-                className="w-full flex items-center p-3 text-left pl-4"
-                style={{gap: '12px', background: isExpanded ? 'rgba(57, 255, 20, 0.05)' : 'transparent'}}
+                className={`w-full flex items-center p-4 text-left transition-colors ${isExpanded ? 'bg-main' : 'hover:bg-main'}`}
+                aria-expanded={isExpanded}
               >
-                <div className="flex items-center gap-2">
-                  <Clock size={12} className="text-primary" />
-                  <span className="font-mono font-bold text-primary" style={{fontSize: '0.75rem'}}>T+{String(debate.day).padStart(4,'0')}</span>
+                <div className="flex items-center gap-2 w-24 flex-shrink-0">
+                  <Clock size={16} className="text-muted" />
+                  <span className="font-semibold text-navy">Day {debate.day}</span>
                 </div>
 
                 {debate.userAdvisory && (
-                  <span className="badge badge-solid" style={{borderColor: 'var(--color-accent)', color: 'var(--color-accent)'}}>
-                    <MessageSquare size={10} />
-                    <span>DIRECTIVE</span>
-                  </span>
+                  <div className="flex-shrink-0 mr-4">
+                    <span className="badge bg-orange bg-opacity-10 text-orange border border-orange border-opacity-20">
+                      <MessageSquare size={12} /> User Directive
+                    </span>
+                  </div>
                 )}
 
-                <span className="flex-1 text-muted font-mono truncate px-2" style={{fontSize: '0.7rem'}}>
+                <div className="flex-1 text-muted text-sm truncate px-4 font-medium">
                   {debate.coordinator?.substring(0, 80)}...
-                </span>
+                </div>
 
-                {isExpanded
-                  ? <ChevronDown size={14} className="text-primary flex-shrink-0" />
-                  : <ChevronRight size={14} className="text-primary flex-shrink-0" />
-                }
+                <div className="flex-shrink-0 w-8 flex justify-end">
+                  {isExpanded
+                    ? <ChevronDown size={20} className="text-navy" />
+                    : <ChevronRight size={20} className="text-muted" />
+                  }
+                </div>
               </button>
 
               {/* Expanded Detail */}
@@ -86,61 +90,51 @@ export default function DecisionLog({ debates }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 mt-2 pl-6" style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                    <div className="p-6 border-t border-border-color bg-surface flex flex-col gap-6">
+                      
                       {/* Advisory */}
                       {debate.userAdvisory && (
-                        <div style={{padding: '10px', background: 'var(--color-accent-dim)', border: '1px solid var(--color-accent)'}}>
-                          <div className="flex items-center mb-1" style={{gap: '8px'}}>
-                            <span className="font-mono font-bold text-accent uppercase tracking-widest" style={{fontSize: '0.65rem'}}>&gt; EXTERNAL DIRECTIVE</span>
-                          </div>
-                          <p className="text-accent font-mono leading-relaxed" style={{fontSize: '0.75rem'}}>"{debate.userAdvisory}"</p>
+                        <div className="p-4 bg-orange bg-opacity-5 border border-orange border-opacity-20 rounded-md">
+                          <h4 className="text-sm font-bold text-orange uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <MessageSquare size={16} /> Commander Directive
+                          </h4>
+                          <p className="text-navy font-medium">"{debate.userAdvisory}"</p>
                         </div>
                       )}
 
                       {/* Agent Responses */}
-                      {['health', 'economy', 'safety'].map(agentId => {
-                        const msg = debate[agentId];
-                        if (!msg || msg === 'thinking') return null;
-                        const agent = AGENTS[agentId];
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {['health', 'economy', 'safety'].map(agentId => {
+                          const msg = debate[agentId];
+                          if (!msg || msg === 'thinking') return null;
+                          const agent = AGENTS[agentId];
 
-                        const colorMap = {
-                          0: { border: 'var(--color-danger)' },
-                          1: { border: 'var(--color-warning)' },
-                          2: { border: 'var(--color-accent)' },
-                          3: { border: 'var(--color-primary)' },
-                        };
-                        const c = colorMap[agentId] || { border: 'var(--border-color)' };
+                          const colorMap = {
+                            0: { color: 'var(--color-danger)' },
+                            1: { color: 'var(--color-orange)' },
+                            2: { color: 'var(--color-navy)' },
+                          };
+                          const c = colorMap[agentId] || { color: 'var(--color-navy)' };
 
-                        return (
-                          <div
-                            key={agentId}
-                            style={{
-                              padding: '10px',
-                              borderLeft: `2px solid ${c.border}`,
-                              background: 'rgba(0,0,0,0.3)',
-                            }}
-                          >
-                            <div className="flex items-center mb-1" style={{gap: '8px'}}>
-                              <span className="font-bold font-mono tracking-widest" style={{ color: c.border, fontSize: '0.65rem' }}>
-                                [{agent?.name || 'AGENT'}]
-                              </span>
-                              <span className="text-muted font-mono uppercase tracking-widest" style={{fontSize: '0.6rem'}}>// {agent?.role || 'ADVISOR'}</span>
+                          return (
+                            <div key={agentId} className="p-4 rounded-md border border-border-color bg-main">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-color">
+                                <span className="w-2 h-2 rounded-full" style={{backgroundColor: c.color}}></span>
+                                <span className="font-bold text-navy text-sm">{agent?.name}</span>
+                              </div>
+                              <p className="text-muted text-sm leading-relaxed">{msg}</p>
                             </div>
-                            <p className="text-main font-mono leading-relaxed" style={{fontSize: '0.75rem'}}>{msg}</p>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
 
                       {/* Coordinator Final Decision */}
                       {debate.coordinator && debate.coordinator !== 'thinking' && (
-                        <div style={{padding: '12px', background: 'var(--color-primary-dim)', border: '1px solid var(--color-primary)'}}>
-                          <div className="flex items-center mb-2" style={{gap: '8px'}}>
-                            <Shield size={12} className="text-primary" />
-                            <span className="font-bold font-mono text-primary uppercase tracking-widest" style={{fontSize: '0.65rem'}}>
-                              EXECUTION ORDER // COORDINATOR
-                            </span>
-                          </div>
-                          <p className="text-bright font-mono leading-relaxed whitespace-pre-wrap" style={{fontSize: '0.75rem'}}>
+                        <div className="p-6 bg-info bg-opacity-5 border border-info border-opacity-20 rounded-md">
+                          <h4 className="text-sm font-bold text-info uppercase tracking-wide mb-3 flex items-center gap-2">
+                            <CheckCircle size={18} /> Final Coordinator Decision
+                          </h4>
+                          <p className="text-navy font-medium leading-relaxed whitespace-pre-wrap">
                             {debate.coordinator}
                           </p>
                         </div>

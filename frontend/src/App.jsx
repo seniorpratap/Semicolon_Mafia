@@ -2,9 +2,9 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, AlertTriangle, Radio, Shield, Zap, Heart, Users,
-  TrendingUp, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Crosshair
+  TrendingUp, Play, Pause, FastForward, RotateCcw, Send, CheckCircle
 } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
@@ -37,14 +37,14 @@ export default function App() {
   useEffect(() => {
     if (simState.day > 0) {
       const s = getStats(simState);
-      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased, economy: s.economyIndex, morale: s.publicMorale }]);
+      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased }]);
     }
   }, [simState.day]);
 
   const tick = useCallback(() => setSimState(p => advanceDay(p)), []);
 
   useEffect(() => {
-    if (isRunning && !isPaused && !isDebating) intervalRef.current = setInterval(tick, 1000);
+    if (isRunning && !isPaused && !isDebating) intervalRef.current = setInterval(tick, 1500);
     else clearInterval(intervalRef.current);
     return () => clearInterval(intervalRef.current);
   }, [isRunning, isPaused, isDebating, tick]);
@@ -71,13 +71,19 @@ export default function App() {
 
   const play = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
   const pause = () => setIsPaused(true);
-  const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 4000); setTimeout(() => triggerDebate(), 500); };
+  const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 5000); setTimeout(() => triggerDebate(), 500); };
   const advisory = (t) => { setIsPaused(true); triggerDebate(t); };
   const reset = () => { clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
 
   useEffect(() => { if (simState.day > 0 && simState.day % 10 === 0 && isRunning && !isDebating) triggerDebate(); }, [simState.day]);
 
-  const threat = cs.totalInfected > 5000 ? 'CRITICAL' : cs.totalInfected > 2000 ? 'SEVERE' : cs.totalInfected > 500 ? 'HIGH' : cs.totalInfected > 100 ? 'ELEVATED' : 'STABLE';
+  // Accessibility Requirement: Don't rely only on color for alerts.
+  // We use icon + explicit label.
+  let threatState = { level: 'Stable', icon: <CheckCircle size={20} className="text-safe" />, color: 'var(--color-safe)' };
+  if (cs.totalInfected > 5000) threatState = { level: 'Critical Emergency', icon: <AlertTriangle size={20} className="text-danger" />, color: 'var(--color-danger)' };
+  else if (cs.totalInfected > 2000) threatState = { level: 'Severe Risk', icon: <AlertTriangle size={20} className="text-orange" />, color: 'var(--color-orange)' };
+  else if (cs.totalInfected > 500) threatState = { level: 'High Risk', icon: <Activity size={20} className="text-orange" />, color: 'var(--color-orange)' };
+  else if (cs.totalInfected > 100) threatState = { level: 'Elevated', icon: <Activity size={20} className="text-info" />, color: 'var(--color-info)' };
 
   const animInf = useAnimatedNumber(cs.totalInfected);
   const animRec = useAnimatedNumber(cs.totalRecovered);
@@ -85,57 +91,55 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <div className="scanlines" />
-      <div className="crt-overlay" />
 
-      {/* ═══ TOP NAV ═══ */}
-      <nav className="tactical-nav">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center text-primary">
-            <Crosshair size={24} />
-          </div>
+      {/* ═══ ACCESSIBLE NAV ═══ */}
+      <header className="main-nav">
+        <div className="flex items-center gap-3">
+          <Shield size={28} className="text-white" />
           <div>
-            <div className="text-lg font-bold text-primary tracking-wider leading-none">DEFCON :: SIMUL-CRISIS</div>
-            <div className="text-[10px] text-accent font-mono uppercase tracking-widest mt-1">Strategic Command Terminal</div>
+            <h1 className="text-xl leading-none">SimulCrisis Dashboard</h1>
+            <div className="text-xs text-white opacity-80 mt-1">Multi-Agent Response Simulator</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {isDebating && (
-            <span className="badge text-accent" style={{borderColor: 'var(--color-accent)'}}>
-              <Shield size={10}/> DELIBERATING
-            </span>
+            <div className="badge bg-orange">
+              <Radio size={16} /> Council Deliberating
+            </div>
           )}
-          {isRunning && !isPaused && (
-            <span className="badge text-primary" style={{borderColor: 'var(--color-primary)'}}>
-              <Radio size={10} className="animate-pulse"/> UPLINK ACTIVE
-            </span>
+          {isRunning && !isPaused && !isDebating && (
+            <div className="badge bg-safe">
+              <Play size={16} /> Simulation Active
+            </div>
           )}
-          <button onClick={() => setShowDecisions(!showDecisions)}
-            className="btn-soft" style={showDecisions ? {background: 'var(--color-primary)', color: 'var(--bg-core)'} : {}}>
-            {showDecisions ? '[ RTB ]' : `[ LOGS: ${debates.length} ]`}
+          
+          <button onClick={() => setShowDecisions(!showDecisions)} className="btn btn-outline" style={{borderColor: 'white', color: 'white', padding: '8px 16px'}}>
+            {showDecisions ? 'Back to Dashboard' : `View Decision Logs (${debates.length})`}
           </button>
           
-          <div className="flex items-center gap-3 pl-4" style={{borderLeft: '1px solid var(--border-color)'}}>
+          <div className="flex items-center gap-3 pl-6 border-l border-white border-opacity-20">
             <div className="text-right">
-              <div className="text-[10px] text-muted font-mono uppercase tracking-wider">SIMULATION DAY</div>
-              <div className="text-2xl font-black font-mono text-primary leading-none">
-                {String(simState.day).padStart(4, '0')}
+              <div className="text-xs text-white opacity-80 uppercase font-semibold">Current Day</div>
+              <div className="text-2xl font-bold leading-none">
+                Day {simState.day}
               </div>
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* ═══ CRISIS TOAST ═══ */}
+      {/* ═══ CRISIS ALERT ═══ */}
       <AnimatePresence>
         {crisisAlert && (
           <motion.div initial={{y:-20,opacity:0}} animate={{y:0,opacity:1}} exit={{y:-20,opacity:0}}
-            className="crisis-toast">
-            <AlertTriangle size={24} className="text-danger animate-pulse"/>
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-50 card p-4 shadow-md flex items-center gap-4" style={{borderLeft: '6px solid var(--color-danger)'}}>
+            <div className="p-2 rounded-full bg-danger bg-opacity-10">
+              <AlertTriangle size={28} className="text-danger"/>
+            </div>
             <div>
-              <div className="text-[10px] text-danger font-mono font-bold uppercase tracking-widest">CRITICAL ALERT DETECTED</div>
-              <div className="text-sm font-bold text-white font-mono uppercase">{crisisAlert}</div>
+              <h3 className="text-sm text-danger font-bold uppercase tracking-wide">Emergency Alert</h3>
+              <p className="text-lg font-semibold text-navy">{crisisAlert}</p>
             </div>
           </motion.div>
         )}
@@ -146,203 +150,194 @@ export default function App() {
           <DecisionLog debates={debates}/>
         </main>
       ) : (
-        /* ═══ TACTICAL DASHBOARD ═══ */
+        /* ═══ MAIN DASHBOARD ═══ */
         <main className="main-content">
           <div className="dashboard-container">
 
-            {/* ── ROW 1: Hero Metrics + Controls ── */}
-            <div className="grid grid-cols-12 gap-4">
+            {/* ── ROW 1: Metrics & Controls ── */}
+            <div className="grid grid-cols-12 gap-6">
 
-              {/* Hero: Active Cases */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} className="col-span-3 bento-hero p-5 flex flex-col justify-between" style={{minHeight:'140px'}}>
-                <div className="flex items-center gap-2">
-                  <Activity size={14} className="text-danger animate-pulse"/>
-                  <span className="text-xs font-mono font-bold text-danger uppercase tracking-widest">ACTIVE THREATS</span>
+              {/* Status Card */}
+              <div className="col-span-3 card p-6 flex flex-col justify-between" style={{borderTop: `6px solid ${threatState.color}`}}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-semibold text-muted uppercase tracking-wide">Current Threat Level</h3>
                 </div>
-                <div className="text-4xl font-black font-mono text-white tracking-wider">
-                  [{animInf.toLocaleString()}]
+                <div className="flex items-center gap-3">
+                  {threatState.icon}
+                  <span className="text-2xl font-bold" style={{color: threatState.color}}>{threatState.level}</span>
                 </div>
-                <div className="mt-2">
-                  <span className="badge badge-solid" style={threat === 'STABLE' ? {color: 'var(--color-primary)'} : {color: 'var(--color-danger)'}}>
-                    THREAT LVL: {threat}
-                  </span>
+                <div className="mt-4">
+                  <p className="text-sm text-muted mb-1">Active Cases</p>
+                  <div className="text-4xl font-black text-navy">{animInf.toLocaleString()}</div>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Recovered */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.05}} className="col-span-2 bento-accent p-5 flex flex-col justify-between">
-                <div className="flex items-center gap-2">
-                  <Heart size={14} className="text-primary"/>
-                  <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">RECOVERED</span>
+              {/* Stats Card */}
+              <div className="col-span-4 card p-6 flex items-center justify-around">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Heart size={18} className="text-safe"/>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide">Recovered</h3>
+                  </div>
+                  <div className="text-3xl font-bold text-safe">{animRec.toLocaleString()}</div>
                 </div>
-                <div className="text-3xl font-black font-mono text-primary">
-                  {animRec.toLocaleString()}
+                <div style={{width: '1px', height: '60px', background: 'var(--border-color)'}} />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Users size={18} className="text-muted"/>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide">Casualties</h3>
+                  </div>
+                  <div className="text-3xl font-bold text-navy">{animDec.toLocaleString()}</div>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Casualties */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.1}} className="col-span-2 bento p-5 flex flex-col justify-between">
-                <div className="flex items-center gap-2">
-                  <Users size={14} className="text-muted"/>
-                  <span className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest">CASUALTIES</span>
-                </div>
-                <div className="text-3xl font-black font-mono text-muted">
-                  {animDec.toLocaleString()}
-                </div>
-              </motion.div>
-
-              {/* Controls */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.15}} className="col-span-5 bento p-5 flex flex-col justify-center">
-                <div className="flex gap-2 mb-3">
+              {/* Controls Card */}
+              <div className="col-span-5 card p-6 flex flex-col justify-center">
+                <div className="flex gap-4 mb-4">
                   {!isRunning || isPaused ? (
-                    <button onClick={play} disabled={isDebating} className="btn-primary flex-1">
-                      <Play size={14}/> {simState.day === 0 ? 'INITIATE SEQ' : 'RESUME SIM'}
+                    <button onClick={play} disabled={isDebating} className="btn btn-navy flex-1">
+                      <Play size={20}/> {simState.day === 0 ? 'Start Simulation' : 'Resume'}
                     </button>
                   ) : (
-                    <button onClick={pause} className="btn-soft flex-1" style={{borderColor: 'var(--color-warning)', color: 'var(--color-warning)'}}>
-                      <Pause size={14}/> HALT
+                    <button onClick={pause} className="btn btn-outline flex-1">
+                      <Pause size={20}/> Pause
                     </button>
                   )}
-                  <button onClick={handleAdvance} disabled={isDebating||!isRunning} className="btn-soft flex-1">
-                    <FastForward size={14}/> JUMP + CALL
+                  <button onClick={handleAdvance} disabled={isDebating||!isRunning} className="btn btn-outline flex-1">
+                    <FastForward size={20}/> Fast Forward
                   </button>
-                  <button onClick={reset} className="btn-icon" title="Reset"><RotateCcw size={14}/></button>
+                  <button onClick={reset} className="btn btn-outline px-4" aria-label="Reset Simulation"><RotateCcw size={20}/></button>
                 </div>
 
-                <div className="flex gap-2">
-                  <button onClick={() => setShowCrisis(!showCrisis)} className="btn-danger flex-shrink-0">
-                    <Zap size={14}/> INJECT THREAT
+                <div className="flex gap-4">
+                  <button onClick={() => setShowCrisis(!showCrisis)} className="btn btn-orange flex-shrink-0">
+                    <Zap size={20}/> Inject Event
                   </button>
                   <div className="flex-1 flex gap-2">
                     <input value={advisoryText} onChange={e=>setAdvisoryText(e.target.value)}
                       onKeyDown={e=>{ if(e.key==='Enter'&&advisoryText.trim()){advisory(advisoryText.trim());setAdvisoryText('');}}}
-                      placeholder="ENTER DIRECTIVE..." disabled={isDebating}
-                      className="input-field"/>
+                      placeholder="Type directive to agents..." disabled={isDebating}
+                      className="input-field" aria-label="Directive input"/>
                     <button onClick={()=>{if(advisoryText.trim()){advisory(advisoryText.trim());setAdvisoryText('');}}} disabled={!advisoryText.trim()||isDebating}
-                      className="btn-primary" style={{padding: '0 12px'}}>
-                      <Send size={14}/>
+                      className="btn btn-navy" aria-label="Send directive">
+                      <Send size={20}/>
                     </button>
                   </div>
                 </div>
 
                 <AnimatePresence>
                   {showCrisis && (
-                    <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} className="mt-2 flex gap-2 overflow-hidden" style={{flexWrap: 'wrap'}}>
+                    <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} className="mt-4 flex gap-2 flex-wrap overflow-hidden">
                       {CRISIS_EVENTS.map(e => (
-                        <button key={e.id} onClick={()=>{crisis(e);setShowCrisis(false);}}
-                          className="btn-danger" style={{padding: '4px 8px', fontSize: '0.7rem'}}>
-                          {e.name.replace(/[^a-zA-Z0-9 ]/g, '')}
+                        <button key={e.id} onClick={()=>{crisis(e);setShowCrisis(false);}} className="btn btn-outline py-2 px-3 text-sm">
+                          {e.name}
                         </button>
                       ))}
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             </div>
 
-            {/* ── ROW 2: Grid + Agent Council ── */}
-            <div className="grid grid-cols-12 gap-4" style={{minHeight:'440px'}}>
-
-              {/* City Grid — wide */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.2}} className="col-span-5">
+            {/* ── ROW 2: Map & Agents ── */}
+            <div className="grid grid-cols-12 gap-6 min-h-[500px]">
+              
+              {/* City Map */}
+              <div className="col-span-5 flex flex-col min-h-0">
                 <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone}/>
-              </motion.div>
+              </div>
 
-              {/* Agent Council — takes more space */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.25}} className="col-span-7 flex flex-col" style={{minHeight: 0}}>
+              {/* Agent Communications */}
+              <div className="col-span-7 flex flex-col min-h-0">
                 <AgentPanel agentMessages={agentMessages} isDebating={isDebating} userAdvisory={latestAdvisory}/>
-              </motion.div>
+              </div>
             </div>
 
-            {/* ── ROW 3: Charts + Gauges ── */}
-            <div className="grid grid-cols-12 gap-4">
-              {/* Infection Chart */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.3}} className="col-span-7 bento p-5">
-                <div className="flex justify-between items-center mb-4 border-b border-color-primary pb-2" style={{borderColor: 'var(--border-color)'}}>
-                  <span className="text-sm font-bold font-mono text-primary uppercase tracking-widest">TRAJECTORY ANALYSIS</span>
-                  <span className="text-xs text-muted font-mono">T+{cs.day}</span>
+            {/* ── ROW 3: Charts & Indicators ── */}
+            <div className="grid grid-cols-12 gap-6">
+              
+              {/* Epidemic Curve */}
+              <div className="col-span-7 card p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg">Epidemic Curve</h3>
+                  <p className="text-sm text-muted">Infected vs Recovered populations over time.</p>
                 </div>
                 {history.length > 2 ? (
-                  <div style={{height: '160px'}}>
+                  <div style={{height: '240px'}}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={history.slice(-60)} margin={{top:0,right:0,bottom:0,left:0}}>
-                        <defs>
-                          <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--color-danger)" stopOpacity={0.4}/><stop offset="95%" stopColor="var(--color-danger)" stopOpacity={0}/></linearGradient>
-                          <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.4}/><stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/></linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                        <Area type="step" dataKey="infected" stroke="var(--color-danger)" fill="url(#gI)" strokeWidth={2} dot={false} isAnimationActive={false}/>
-                        <Area type="step" dataKey="recovered" stroke="var(--color-primary)" fill="url(#gR)" strokeWidth={2} dot={false} isAnimationActive={false}/>
-                        <Tooltip content={<TT/>}/>
+                      <AreaChart data={history.slice(-60)} margin={{top:10,right:10,bottom:0,left:0}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                        <XAxis dataKey="day" tick={{fontSize: 12, fill: 'var(--text-muted)'}} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={(val) => val > 1000 ? (val/1000).toFixed(0)+'k' : val} tick={{fontSize: 12, fill: 'var(--text-muted)'}} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTooltip/>}/>
+                        <Area type="monotone" dataKey="infected" stroke="var(--color-danger)" fill="var(--color-danger)" fillOpacity={0.1} strokeWidth={3} />
+                        <Area type="monotone" dataKey="recovered" stroke="var(--color-safe)" fill="var(--color-safe)" fillOpacity={0.1} strokeWidth={3} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center font-mono text-sm text-muted" style={{height: '160px'}}>&gt; AWAITING DATA...</div>
+                  <div className="flex items-center justify-center h-[240px] text-muted bg-main rounded-md border border-border-color">
+                    Insufficient data for chart generation.
+                  </div>
                 )}
-                <div className="flex gap-6 mt-3 justify-center">
-                  <div className="flex items-center gap-2"><div style={{width:'12px', height:'12px', border:'1px solid var(--color-danger)', background:'var(--color-danger-dim)'}}/><span className="text-[10px] font-mono text-muted uppercase tracking-widest">Infected</span></div>
-                  <div className="flex items-center gap-2"><div style={{width:'12px', height:'12px', border:'1px solid var(--color-primary)', background:'var(--color-primary-dim)'}}/><span className="text-[10px] font-mono text-muted uppercase tracking-widest">Recovered</span></div>
+                <div className="flex gap-6 mt-4 justify-center">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-danger"/> <span className="text-sm font-medium">Infected</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-safe"/> <span className="text-sm font-medium">Recovered</span></div>
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Gauges + Zone summary */}
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.35}} className="col-span-5 flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                  <GaugeCard label="ECONOMY" value={cs.economyIndex} color="var(--color-primary)" icon={<TrendingUp size={16} className="text-primary"/>}/>
-                  <GaugeCard label="MORALE" value={cs.publicMorale} color="var(--color-accent)" icon={<Shield size={16} style={{color: 'var(--color-accent)'}}/>}/>
+              {/* Status Indicators */}
+              <div className="col-span-5 flex flex-col gap-6">
+                <div className="grid grid-cols-2 gap-6 flex-1">
+                  <div className="card p-6 flex flex-col justify-center text-center">
+                    <TrendingUp size={24} className="mx-auto text-info mb-2"/>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide mb-1">Economy Index</h3>
+                    <div className="text-3xl font-bold text-navy">{Math.round(cs.economyIndex)}/100</div>
+                  </div>
+                  <div className="card p-6 flex flex-col justify-center text-center">
+                    <Shield size={24} className="mx-auto text-safe mb-2"/>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide mb-1">Public Morale</h3>
+                    <div className="text-3xl font-bold text-navy">{Math.round(cs.publicMorale)}/100</div>
+                  </div>
                 </div>
-                <div className="bento p-5 flex items-center justify-between" style={{borderTop: '2px solid var(--color-primary)'}}>
-                  <div>
-                    <div className="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">COMPROMISED</div>
-                    <div className="text-2xl font-black text-white font-mono">{String(cs.activeZones).padStart(2,'0')} <span className="text-xs font-normal text-muted">/ 36</span></div>
+
+                <div className="card p-6 grid grid-cols-3 divide-x divide-border-color">
+                  <div className="text-center px-2">
+                    <h3 className="text-sm font-semibold text-muted mb-1">Infected Sectors</h3>
+                    <div className="text-2xl font-bold text-navy">{cs.activeZones} <span className="text-sm font-normal text-muted">/ 36</span></div>
                   </div>
-                  <div>
-                    <div className="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">LOCKDOWN</div>
-                    <div className="text-2xl font-black text-warning font-mono">{String(cs.lockdownZones).padStart(2,'0')}</div>
+                  <div className="text-center px-2">
+                    <h3 className="text-sm font-semibold text-muted mb-1">In Lockdown</h3>
+                    <div className="text-2xl font-bold text-orange">{cs.lockdownZones}</div>
                   </div>
-                  <div>
-                    <div className="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">MED CAPACITY</div>
-                    <div className={`text-2xl font-black font-mono ${cs.hospitalLoad > cs.hospitalCapacity ? 'text-danger animate-pulse' : 'text-primary'}`}>
+                  <div className="text-center px-2">
+                    <h3 className="text-sm font-semibold text-muted mb-1">Hospital Load</h3>
+                    <div className={`text-2xl font-bold ${cs.hospitalLoad > cs.hospitalCapacity ? 'text-danger' : 'text-safe'}`}>
                       {Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)}%
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </div>
+              </div>
 
+            </div>
           </div>
         </main>
       )}
-
-      {/* ═══ FOOTER ═══ */}
-      <footer className="footer">
-        [ SECURE TERMINAL ] // SIMUL-CRISIS // AUTH: OMEGA
-      </footer>
     </div>
   );
 }
 
-function GaugeCard({ label, value, color, icon }) {
-  const w = `${Math.max(0, Math.min(100, value))}%`;
-  return (
-    <div className="bento p-4 flex flex-col justify-between">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">{icon}<span className="text-[10px] font-bold font-mono tracking-widest text-muted">{label}</span></div>
-        <span className="text-xl font-black font-mono" style={{color}}>[{Math.round(value)}%]</span>
-      </div>
-      <div style={{height: '8px', border: `1px solid var(--border-color)`, background: 'rgba(0,0,0,0.5)', padding: '1px'}}>
-        <motion.div initial={{width:0}} animate={{width:w}} style={{height:'100%', backgroundColor:color}} transition={{duration:0.8}}/>
-      </div>
-    </div>
-  );
-}
-
-function TT({ active, payload }) {
+function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{background: 'var(--bg-core)', border: '1px solid var(--color-primary)', padding: '8px 12px', boxShadow: '0 0 15px var(--color-primary-dim)'}}>
-      {payload.map((p,i) => <div key={i} className="font-mono font-bold text-xs mb-1" style={{color:p.color}}>&gt; {p.dataKey.toUpperCase()}: {p.value?.toLocaleString()}</div>)}
+    <div className="card p-4 shadow-md">
+      <p className="font-bold mb-2">Day {payload[0].payload.day}</p>
+      {payload.map((p,i) => (
+        <div key={i} className="flex justify-between gap-4 mb-1 text-sm font-medium">
+          <span style={{color: p.stroke}} className="capitalize">{p.dataKey}</span>
+          <span>{p.value?.toLocaleString()}</span>
+        </div>
+      ))}
     </div>
   );
 }

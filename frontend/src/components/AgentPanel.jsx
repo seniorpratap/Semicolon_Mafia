@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Brain } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 
@@ -14,26 +14,44 @@ function DotsLoader({ color }) {
 }
 
 /**
- * AgentMessage — slides in on first render only.
- * Uses a ref to track if it's already been shown,
- * so tab switching doesn't replay the animation.
+ * StreamingText — renders text with a fade-in on the latest chunk.
+ * Tracks previous text length to know what's "new".
  */
-function AgentMessage({ agentId, message }) {
+function StreamingText({ text, color }) {
+  const prevLen = useRef(0);
+  const [oldText, setOldText] = useState('');
+  const [newText, setNewText] = useState('');
+
+  useEffect(() => {
+    if (text.length > prevLen.current) {
+      setOldText(text.substring(0, prevLen.current));
+      setNewText(text.substring(prevLen.current));
+    } else {
+      setOldText(text);
+      setNewText('');
+    }
+    prevLen.current = text.length;
+  }, [text]);
+
+  return (
+    <div className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color }}>
+      {oldText}
+      {newText && (
+        <span className="stream-fade-in">{newText}</span>
+      )}
+      {/* Blinking cursor while streaming */}
+      <span className="cursor-blink" />
+    </div>
+  );
+}
+
+function AgentMessage({ agentId, message, isStreaming }) {
   const agent = AGENTS[agentId];
   if (!message) return null;
   const isThinking = message.text === 'thinking';
-  const hasAnimated = useRef(false);
-  const elRef = useRef(null);
-
-  useEffect(() => {
-    if (!hasAnimated.current && elRef.current) {
-      hasAnimated.current = true;
-      elRef.current.classList.add('agent-msg-enter');
-    }
-  }, []);
 
   return (
-    <div ref={elRef} className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border-light)' }}>
+    <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border-light)' }}>
       <div className="flex items-center gap-3 mb-2">
         <div className="w-8 h-8 border flex items-center justify-center text-lg"
           style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
@@ -53,6 +71,8 @@ function AgentMessage({ agentId, message }) {
 
       {isThinking ? (
         <DotsLoader color={agent?.color || 'var(--t-muted)'} />
+      ) : isStreaming ? (
+        <StreamingText text={message.text} color="var(--t-text2)" />
       ) : (
         <div className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--t-text2)' }}>
           {message.text}
@@ -88,7 +108,7 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages — each agent appears only once */}
       <div className="flex-1 overflow-y-auto scroll-y">
         {agentMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
@@ -101,9 +121,19 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
             </span>
           </div>
         ) : (
-          agentMessages.map((msg, idx) => (
-            <AgentMessage key={`${msg.agentId}-${idx}`} agentId={msg.agentId} message={msg} />
-          ))
+          agentMessages.map((msg, idx) => {
+            // Last message from this agent + still debating = streaming
+            const isLast = idx === agentMessages.length - 1;
+            const streaming = isDebating && isLast && msg.text !== 'thinking';
+            return (
+              <AgentMessage
+                key={msg.agentId}
+                agentId={msg.agentId}
+                message={msg}
+                isStreaming={streaming}
+              />
+            );
+          })
         )}
       </div>
 

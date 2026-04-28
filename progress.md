@@ -184,3 +184,84 @@ frontend/
 - 🟢 **Build**: Clean (0 errors)
 - 🟢 **Deployed**: Running on `localhost:5173`
 
+---
+
+## Checkpoint 4 — 11:30 PM (AI Intelligence Upgrade + Production Hardening)
+
+### What was completed since Checkpoint 3:
+
+#### 1. Gemini SDK Migration (Critical Fix)
+- ✅ **Migrated from deprecated `@google/generative-ai` to `@google/genai`**: Old SDK was causing silent failures, forcing 100% mock fallback
+- ✅ **Model upgraded**: `gemini-2.0-flash` → `gemini-2.5-flash` (better reasoning, faster streaming)
+- ✅ **Temperature raised to 0.9**: Produces more varied, less repetitive agent responses
+- ✅ **Max tokens bumped to 1024**: Agents now give full data-driven analyses instead of truncated generic advice
+
+#### 2. Complete Agent Brain Rewrite (Major)
+- ✅ **Data-driven system prompts**: All 4 agents now receive detailed zone-by-zone situation reports with infection rates, hospital occupancy, lockdown status, vaccination percentages
+- ✅ **Mandatory advisory integration**: Agents MUST address user advisories when present — they can agree, disagree, or modify, but cannot ignore
+- ✅ **Counter-argument chains**: Economy agent sees Health's full argument and must counter with specific numbers. Safety sees both. Coordinator weighs all three with explicit reasoning chains
+- ✅ **Severity-tiered responses**: System prompts vary based on infection severity (moderate/high/extreme) to prevent identical responses across different scenarios
+- ✅ **Fixed template literal bugs**: Mock responses were showing literal `${s.deceased}` instead of actual numbers
+
+#### 3. Dynamic Economy & Morale System (Major Fix)
+- ✅ **Economy was stuck at 100/100** — only dropped from lockdowns (which rarely happen early)
+- ✅ **Economy now drops from 3 sources**:
+  - Lockdowns: 0.15/zone/day (partial), 0.35/zone/day (full)
+  - Infection workforce loss: up to 15 pts/day proportional to infection rate
+  - Hospital overflow panic: 0.5/day per overwhelmed hospital
+- ✅ **Morale now decays properly** from:
+  - Death shock (0.05–0.30/day scaling with total deaths)
+  - Lockdown fatigue (0.2 per locked zone per day)
+  - Infection fear (proportional to infection rate)
+- ✅ **Natural recovery**: Tiny +0.1/day economy recovery, morale recovers only when no lockdowns + low infections
+
+#### 4. Rich Action Execution System (Major)
+- ✅ **Zone-aware action parsing**: `parseDecisionAction()` now receives full zones array, resolves zone IDs to zone NAMES
+- ✅ **Detailed action cards**: Each action shows action type with icon, summary with zone names, and operational detail line
+- ✅ **Staggered entrance animation**: Action cards slide in with 150ms delay between each
+- ✅ **Fallback monitoring action**: If coordinator decides but no specific action parsed, shows "Enhanced surveillance activated"
+
+#### 5. Crisis Events Expanded (5 → 10)
+- ✅ Original 5: Virus Mutation, Hospital Fire, Supply Shortage, Mass Gathering, Vaccine Shipment
+- ✅ New: ⚡ Power Grid Failure — Zones 5-8 lose 70% hospital capacity, mortality +80%
+- ✅ New: 📱 Anti-Vaccine Misinformation Wave — Public morale crashes by 30 points
+- ✅ New: 🚧 Border Checkpoint Breach — 3000 unscreened infections seeded across Zones 0-2
+- ✅ New: 🏥 Healthcare Worker Strike — All hospitals lose 50% capacity, morale -15
+- ✅ New: 🚰 Water Contamination — 2000 secondary illness cases in Zone 10
+
+#### 6. Agent Council UX Overhaul
+- ✅ **Auto-scroll**: Smoothly scrolls to latest agent message as text streams in
+- ✅ **Message persistence**: Previous debate messages preserved as collapsible dropdown at 60% opacity
+- ✅ **Cycle separator**: Visual "Current Session" divider between old and new messages
+- ✅ **Advisory always active**: Can type advisory even during debate — stores for next cycle
+
+#### 7. Stability & Bug Fixes
+- ✅ **Stop Demo fixed**: Now resets isDebating/isPaused + AbortController cancels in-flight API calls
+- ✅ **Crisis injection guard**: Injecting crisis during active debate won't start parallel debate
+- ✅ **ZoneDetail popup light mode**: All hardcoded dark colors replaced with CSS theme variables
+- ✅ **CityGrid selection light mode**: Selection uses var(--t-accent) box-shadow for both themes
+- ✅ **Grid cell colors**: Boosted opacity on LOW/MED/HI cells for visibility in both modes
+
+### Commits Since Checkpoint 3 (8 commits):
+```
+63e6b82 fix: template literal bug + zone detail light mode
+e4f0e48 fix: ZoneDetail popup now respects light/dark theme
+5927462 fix: economy and morale now actually dynamic
+e424c93 feat: 5 fixes — grid selection, crisis guard, more events, auto-scroll, docs
+160fb1c fix: stop demo + advisory handling
+4096e8e MAJOR: fix Gemini SDK + rich action details
+55af3c0 feat: prominent action execution banners after debates
+b414a65 MAJOR: complete agent brain rewrite for dynamic, data-driven debates
+```
+
+### Current Status:
+- 🟢 **Frontend**: Production-ready tactical UI, full light/dark theme support
+- 🟢 **Simulation**: Dynamic SIR model with economy/morale decay, 10 crisis events
+- 🟢 **AI Agents**: 4 agents on Gemini 2.5 Flash with data-driven debates + intelligent mock fallback
+- 🟢 **Actions**: Rich zone-aware action cards with summaries, details, and animations
+- 🟢 **Demo Mode**: One-click auto-pilot with clean abort
+- 🟢 **Stability**: No parallel debates, proper cleanup, advisory queuing
+- 🟢 **Build**: Clean (0 errors)
+- 🟢 **Deployed**: Running on localhost:5173
+
+

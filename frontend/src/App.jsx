@@ -9,6 +9,7 @@ import DecisionLog from './components/DecisionLog';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
+import { isGeminiReady } from './services/gemini';
 import { useAnimatedNumber } from './hooks/useEffects';
 
 import './index.css';
@@ -94,6 +95,12 @@ export default function App() {
           <div>
             <div className="text-sm font-bold text-white tracking-tight">SimulCrisis</div>
             <div className="text-[9px] font-mono uppercase tracking-[0.15em]" style={{ color: '#6b7280' }}>Multi-Agent Crisis Intelligence</div>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 border ml-2" style={{ borderColor: isGeminiReady() ? '#10b981' : '#f59e0b', background: isGeminiReady() ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)' }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isGeminiReady() ? '#10b981' : '#f59e0b' }} />
+            <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: isGeminiReady() ? '#10b981' : '#f59e0b' }}>
+              {isGeminiReady() ? 'Gemini Live' : 'Mock Mode'}
+            </span>
           </div>
         </div>
 

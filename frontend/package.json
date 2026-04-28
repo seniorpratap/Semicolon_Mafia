@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.105.0",
     "@tailwindcss/vite": "^4.2.4",
     "axios": "^1.15.2",

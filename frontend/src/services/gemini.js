@@ -20,11 +20,11 @@ if (API_KEY && API_KEY !== 'your_key_here') {
   try {
     genAI = new GoogleGenerativeAI(API_KEY);
     model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-pro',
       generationConfig: {
         temperature: 0.8,
         topP: 0.95,
-        maxOutputTokens: 512,
+        maxOutputTokens: 1024,
       },
     });
   } catch (err) {
@@ -54,12 +54,12 @@ export async function generateAgentResponse(systemPrompt, userPrompt) {
 
   // Create a model instance with the agent's system prompt
   const agentModel = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-pro',
     systemInstruction: systemPrompt,
     generationConfig: {
       temperature: 0.8,
       topP: 0.95,
-      maxOutputTokens: 512,
+      maxOutputTokens: 1024,
     },
   });
 
@@ -82,12 +82,12 @@ export async function generateAgentResponseStreaming(systemPrompt, userPrompt, o
   }
 
   const agentModel = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-pro',
     systemInstruction: systemPrompt,
     generationConfig: {
       temperature: 0.8,
       topP: 0.95,
-      maxOutputTokens: 512,
+      maxOutputTokens: 1024,
     },
   });
 

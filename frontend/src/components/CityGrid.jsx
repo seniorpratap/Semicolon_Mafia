@@ -47,39 +47,36 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
                     boxShadow: `inset 0 0 0 2px #ef4444, 0 0 8px rgba(239,68,68,0.3)`,
                     background: 'rgba(239,68,68,0.08)',
                   } : zone.lockdownLevel === 1 ? {
-                    boxShadow: `inset 0 0 0 2px #f59e0b`,
+                    boxShadow: `inset 0 0 0 1.5px #f59e0b`,
                     background: 'rgba(245,158,11,0.06)',
                   } : {}),
                 }}
               >
-                {/* Zone Name + Status Icons */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-mono font-bold truncate leading-none" style={{ color: 'var(--t-text)', opacity: 0.8 }}>
-                    {zone.name.length > 8 ? zone.name.substring(0, 7) + '…' : zone.name}
-                  </span>
-                  {zone.lockdownLevel > 0 && (
-                    <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{
-                      background: zone.lockdownLevel === 2 ? '#ef4444' : '#f59e0b',
-                      color: '#fff',
-                      lineHeight: '14px',
-                    }}>
-                      🔒{zone.lockdownLevel === 2 ? 'F' : 'P'}
-                    </span>
-                  )}
-                  {zone.vaccinationRate > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8b5cf6' }} title={`Vaccinated: ${(zone.vaccinationRate * 100).toFixed(0)}%`} />
-                  )}
+                {/* Lockdown indicator — top right corner */}
+                {zone.lockdownLevel > 0 && (
+                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{
+                    background: zone.lockdownLevel === 2 ? '#ef4444' : '#f59e0b',
+                    boxShadow: `0 0 4px ${zone.lockdownLevel === 2 ? '#ef4444' : '#f59e0b'}`,
+                  }} />
+                )}
+                {/* Vaccination indicator — bottom right */}
+                {zone.vaccinationRate > 0 && (
+                  <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: '#8b5cf6' }} />
+                )}
+                {/* Military indicator — bottom left */}
+                {zone.militaryDeployed && (
+                  <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full" style={{ background: '#3b82f6' }} />
+                )}
+
+                {/* Zone Name */}
+                <div className="text-[9px] font-mono font-bold truncate leading-none" style={{ color: 'var(--t-text)', opacity: 0.8 }}>
+                  {zone.name.length > 8 ? zone.name.substring(0, 7) + '…' : zone.name}
                 </div>
 
                 {/* Infected Count */}
                 <div className="text-[11px] font-mono font-bold mt-0.5 leading-none" style={{ color: 'var(--t-text)' }}>
                   {zone.infected > 0 ? zone.infected.toLocaleString() : '0'}
                 </div>
-
-                {/* Military deployed indicator */}
-                {zone.militaryDeployed && (
-                  <div className="absolute top-0.5 right-0.5 text-[8px]" title="Military Deployed">🛡️</div>
-                )}
               </button>
             );
           })}

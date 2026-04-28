@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimatedNumber } from '../hooks/useEffects';
 import { MapPin } from 'lucide-react';
 

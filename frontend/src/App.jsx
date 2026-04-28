@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain } from 'lucide-react';
+import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 import CityGrid from './components/CityGrid';
@@ -29,7 +29,11 @@ export default function App() {
   const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState('');
   const intervalRef = useRef(null);
+  const demoRef = useRef(false);
+  const demoAbortRef = useRef(null);
 
   const cs = getStats(simState);
 
@@ -72,9 +76,122 @@ export default function App() {
   const pause = () => setIsPaused(true);
   const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 4000); setTimeout(() => triggerDebate(), 500); };
   const advisory = (t) => { setIsPaused(true); triggerDebate(t); };
-  const reset = () => { clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
+  const reset = () => { stopDemo(); clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
 
-  useEffect(() => { if (simState.day > 0 && simState.day % 10 === 0 && isRunning && !isDebating) triggerDebate(); }, [simState.day]);
+  // ─── Demo Mode ───────────────────────────────────────────
+  const sleep = (ms) => new Promise((resolve, reject) => {
+    const id = setTimeout(resolve, ms);
+    // Store abort function so we can cancel on demo stop
+    demoAbortRef.current = () => { clearTimeout(id); reject(new Error('demo_stopped')); };
+  });
+
+  const stopDemo = useCallback(() => {
+    demoRef.current = false;
+    setDemoMode(false);
+    setDemoStep('');
+    if (demoAbortRef.current) { demoAbortRef.current(); demoAbortRef.current = null; }
+  }, []);
+
+  const startDemo = useCallback(async () => {
+    demoRef.current = true;
+    setDemoMode(true);
+
+    try {
+      // Phase 1: Start simulation
+      setDemoStep('Initializing simulation...');
+      setIsRunning(true); setIsPaused(false);
+      await sleep(2000);
+      if (!demoRef.current) return;
+
+      // Phase 2: Let it run for a few days, then advance + debate
+      setDemoStep('Advancing 5 days...');
+      setSimState(prev => {
+        let s = prev;
+        for (let i = 0; i < 5; i++) s = advanceDay(s);
+        return s;
+      });
+      await sleep(1500);
+      if (!demoRef.current) return;
+
+      // Phase 3: First agent debate
+      setDemoStep('Agent council deliberating...');
+      setIsDebating(true); setIsPaused(true); setAgentMessages([]);
+      const s1 = getStats(simState);
+      const debate1 = await runAgentDebate(s1, simState.zones, simState.day, [], '',
+        (id, text) => { setAgentMessages(prev => { const filtered = prev.filter(m => m.agentId !== id || text === 'thinking'); return [...filtered, { agentId: id, text }]; }); }
+      );
+      if (!demoRef.current) return;
+      const actions1 = parseDecisionAction(debate1.coordinator);
+      setSimState(prev => { let ns = prev; actions1.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
+      setDebates(p => [...p, debate1]);
+      setIsDebating(false);
+      await sleep(3000);
+      if (!demoRef.current) return;
+
+      // Demo loop: crisis → advance → debate
+      const crisisQueue = [...CRISIS_EVENTS];
+      let cycleCount = 0;
+
+      while (demoRef.current && cycleCount < 5) {
+        cycleCount++;
+
+        // Inject crisis
+        if (crisisQueue.length > 0) {
+          const crisisEvent = crisisQueue.shift();
+          setDemoStep(`Crisis: ${crisisEvent.name}`);
+          setSimState(prev => crisisEvent.apply(prev));
+          setCrisisAlert(crisisEvent.name);
+          setTimeout(() => setCrisisAlert(null), 4000);
+          await sleep(3000);
+          if (!demoRef.current) return;
+        }
+
+        // Advance days
+        setDemoStep(`Cycle ${cycleCount}: Advancing 5 days...`);
+        setSimState(prev => {
+          let s = prev;
+          for (let i = 0; i < 5; i++) s = advanceDay(s);
+          return s;
+        });
+        await sleep(1500);
+        if (!demoRef.current) return;
+
+        // Agent debate
+        setDemoStep(`Cycle ${cycleCount}: Council debate...`);
+        setIsDebating(true); setIsPaused(true); setAgentMessages([]);
+
+        // Use a ref-stable way to get latest state
+        const currentState = await new Promise(resolve => {
+          setSimState(prev => { resolve(prev); return prev; });
+        });
+        const stats = getStats(currentState);
+        const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
+
+        const debate = await runAgentDebate(stats, currentState.zones, currentState.day, rd, '',
+          (id, text) => { setAgentMessages(prev => { const filtered = prev.filter(m => m.agentId !== id || text === 'thinking'); return [...filtered, { agentId: id, text }]; }); }
+        );
+        if (!demoRef.current) return;
+
+        const actions = parseDecisionAction(debate.coordinator);
+        setSimState(prev => { let ns = prev; actions.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
+        setDebates(p => [...p, debate]);
+        setIsDebating(false);
+
+        setDemoStep(`Cycle ${cycleCount} complete. Next in 4s...`);
+        await sleep(4000);
+        if (!demoRef.current) return;
+      }
+
+      // Demo finished
+      setDemoStep('Demo complete.');
+      await sleep(2000);
+      stopDemo();
+
+    } catch (err) {
+      if (err.message !== 'demo_stopped') console.error('[Demo]', err);
+      // demo was stopped by user — clean exit
+    }
+  }, [simState, debates, stopDemo]);
 
   const threat = cs.totalInfected > 5000 ? 'CRITICAL' : cs.totalInfected > 2000 ? 'SEVERE' : cs.totalInfected > 500 ? 'HIGH' : cs.totalInfected > 100 ? 'ELEVATED' : 'LOW';
   const threatColor = { CRITICAL: '#ef4444', SEVERE: '#f97316', HIGH: '#f59e0b', ELEVATED: '#eab308', LOW: '#10b981' }[threat];
@@ -182,10 +299,35 @@ export default function App() {
                   <button onClick={reset} className="tac-btn px-3"><RotateCcw size={12} /></button>
                 </div>
 
-                <button onClick={handleAdvance} disabled={isDebating || !isRunning}
+                <button onClick={handleAdvance} disabled={isDebating || !isRunning || demoMode}
                   className="tac-btn-danger w-full flex items-center justify-center gap-2">
                   <FastForward size={12} /> Advance 5 Days + Council Debate
                 </button>
+
+                {/* Demo Mode */}
+                {!demoMode ? (
+                  <button onClick={startDemo} disabled={isDebating}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase font-mono transition-all"
+                    style={{ letterSpacing: '0.12em', border: '1px solid #8b5cf6', color: '#8b5cf6', background: 'transparent' }}
+                    onMouseEnter={e => { e.target.style.background = '#8b5cf6'; e.target.style.color = '#fff'; }}
+                    onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = '#8b5cf6'; }}>
+                    <Radio size={12} /> Demo Mode — Auto Pilot
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <button onClick={stopDemo}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase font-mono"
+                      style={{ letterSpacing: '0.12em', border: '1px solid #ef4444', color: '#fff', background: '#ef4444' }}>
+                      <Pause size={12} /> Stop Demo
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-2 border" style={{ borderColor: '#8b5cf6', background: 'rgba(139,92,246,0.06)' }}>
+                      <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#8b5cf6' }} />
+                      <span className="text-[9px] font-mono uppercase tracking-[0.1em]" style={{ color: '#8b5cf6' }}>
+                        {demoStep || 'Demo active...'}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Crisis injection */}
                 <button onClick={() => setShowCrisis(!showCrisis)} className="tac-btn w-full flex items-center justify-between">

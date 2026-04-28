@@ -1,0 +1,24 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+requests
+google-generativeai
+Pillow
+python-multipart
+pydantic
+
+# ML / Data Science
+scikit-learn
+pandas
+numpy
+joblib
+
+# Optional — uncomment what you need:
+# transformers          # HuggingFace models (NLP, CV)
+# torch                 # PyTorch (for transformers)
+# torchvision           # Image models
+# ultralytics           # YOLOv8 object detection
+# opencv-python         # Computer vision
+# textblob              # Simple sentiment analysis
+# supabase              # Supabase Python client
+# openai                # OpenAI API (backup)

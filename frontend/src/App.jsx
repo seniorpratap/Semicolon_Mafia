@@ -29,6 +29,7 @@ export default function App() {
   const [latestAdvisory, setLatestAdvisory] = useState('');
   const [crisisAlert, setCrisisAlert] = useState(null);
   const [executedActions, setExecutedActions] = useState([]);
+  const [previousMessages, setPreviousMessages] = useState([]);
   const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -68,7 +69,10 @@ export default function App() {
       if (adv) setLatestAdvisory(adv);
       return;
     }
-    setIsDebating(true); setIsPaused(true); setAgentMessages([]); setExecutedActions([]);
+    // Save current messages as "previous" before clearing
+    setIsDebating(true); setIsPaused(true);
+    setPreviousMessages(prev => agentMessages.length > 0 ? agentMessages : prev);
+    setAgentMessages([]); setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
     const abortController = new AbortController();
     debateAbortRef.current = abortController;
@@ -106,7 +110,15 @@ export default function App() {
 
   const play = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
   const pause = () => setIsPaused(true);
-  const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 4000); setTimeout(() => triggerDebate(), 500); };
+  const crisis = (e) => {
+    setSimState(p => e.apply(p));
+    setCrisisAlert(e.name);
+    setTimeout(() => setCrisisAlert(null), 4000);
+    // Only trigger debate if one isn't already running
+    if (!debateAbortRef.current) {
+      setTimeout(() => triggerDebate(), 500);
+    }
+  };
   const advisory = (t) => {
     if (isDebating) {
       // Store advisory for display, will be used in next debate
@@ -460,6 +472,7 @@ export default function App() {
               agentMessages={agentMessages}
               isDebating={isDebating}
               executedActions={executedActions}
+              previousMessages={previousMessages}
               userAdvisory={latestAdvisory}
               advisoryText={advisoryText}
               setAdvisoryText={setAdvisoryText}

@@ -296,6 +296,58 @@ export const CRISIS_EVENTS = [
     id: 'vaccine_arrival',
     name: '💉 Emergency Vaccine Shipment',
     description: 'Vaccine available — can now deploy vaccination drives',
-    apply: (state) => state, // enables vaccination action
+    apply: (state) => state,
+  },
+  {
+    id: 'power_outage',
+    name: '⚡ Power Grid Failure in Zones 5-8',
+    description: 'Hospital ventilators offline — mortality spikes 80%',
+    apply: (state) => {
+      const zones = state.zones.map(z => ({ ...z }));
+      [5, 6, 7, 8].forEach(i => { if (zones[i]) zones[i].hospitalCapacity = Math.floor(zones[i].hospitalCapacity * 0.3); });
+      return { ...state, zones, mortalityRate: state.mortalityRate * 1.8 };
+    },
+  },
+  {
+    id: 'misinformation',
+    name: '📱 Anti-Vaccine Misinformation Wave',
+    description: 'Public morale crashes, vaccine compliance drops 60%',
+    apply: (state) => ({ ...state, publicMorale: Math.max(10, state.publicMorale - 30) }),
+  },
+  {
+    id: 'border_breach',
+    name: '🚧 Border Checkpoint Breach',
+    description: '3000 unscreened migrants enter Zones 0-2',
+    apply: (state) => {
+      const zones = state.zones.map(z => ({ ...z }));
+      [0, 1, 2].forEach(i => {
+        const spike = Math.min(1000, zones[i].susceptible);
+        zones[i].infected += spike;
+        zones[i].susceptible -= spike;
+      });
+      return { ...state, zones };
+    },
+  },
+  {
+    id: 'healthcare_strike',
+    name: '🏥 Healthcare Worker Strike',
+    description: 'Hospital efficiency drops 50% across all zones',
+    apply: (state) => {
+      const zones = state.zones.map(z => ({ ...z, hospitalCapacity: Math.floor(z.hospitalCapacity * 0.5) }));
+      return { ...state, zones, publicMorale: Math.max(10, state.publicMorale - 15) };
+    },
+  },
+  {
+    id: 'water_contamination',
+    name: '🚰 Water Contamination in Zone 10',
+    description: 'Secondary illness outbreak — 2000 new cases in residential area',
+    apply: (state) => {
+      const zones = state.zones.map(z => ({ ...z }));
+      const idx = Math.min(10, zones.length - 1);
+      const spike = Math.min(2000, zones[idx].susceptible);
+      zones[idx].infected += spike;
+      zones[idx].susceptible -= spike;
+      return { ...state, zones };
+    },
   },
 ];

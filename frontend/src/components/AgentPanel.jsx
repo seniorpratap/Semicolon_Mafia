@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Brain, Shield, Syringe, Building2, Search, Lock, AlertTriangle } from 'lucide-react';
+import { Brain, AlertTriangle, ChevronDown } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 
 const ACTION_META = {
@@ -9,6 +9,7 @@ const ACTION_META = {
   expand_hospital: { icon: '🏥', label: 'HOSPITAL EXPANSION', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)' },
   testing: { icon: '🔬', label: 'MASS TESTING', color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)' },
   deploy_military: { icon: '🛡️', label: 'MILITARY DEPLOYED', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+  monitoring: { icon: '📡', label: 'ENHANCED MONITORING', color: '#6b7280', bg: 'rgba(107,114,128,0.08)' },
 };
 
 function DotsLoader({ color }) {
@@ -83,12 +84,8 @@ function AgentMessage({ agentId, message, isStreaming }) {
   );
 }
 
-/**
- * ExecutedActions — prominent banner showing what the coordinator decided to do
- */
 function ExecutedActions({ actions }) {
   if (!actions || actions.length === 0) return null;
-
   return (
     <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
       <div className="flex items-center gap-2 mb-3">
@@ -129,8 +126,34 @@ function ExecutedActions({ actions }) {
   );
 }
 
-export default function AgentPanel({ agentMessages, isDebating, executedActions, userAdvisory,
-  advisoryText, setAdvisoryText, onAdvisory, suggestions, showSuggestions, setShowSuggestions }) {
+/**
+ * CycleSeparator — divider between old messages and new cycle
+ */
+function CycleSeparator({ label }) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-2" style={{ background: 'var(--t-hover)' }}>
+      <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
+      <span className="text-[9px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>
+        {label}
+      </span>
+      <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
+    </div>
+  );
+}
+
+export default function AgentPanel({ agentMessages, isDebating, executedActions, previousMessages,
+  userAdvisory, advisoryText, setAdvisoryText, onAdvisory, suggestions, showSuggestions, setShowSuggestions }) {
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollRef = useRef(null);
+  const [showOldMessages, setShowOldMessages] = useState(false);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [agentMessages, executedActions]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -156,18 +179,44 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
       )}
 
       {/* Messages + Actions */}
-      <div className="flex-1 overflow-y-auto scroll-y">
-        {agentMessages.length === 0 ? (
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-y">
+        {agentMessages.length === 0 && (!previousMessages || previousMessages.length === 0) ? (
           <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
             <div className="w-16 h-16 border-2 border-dashed flex items-center justify-center mb-4"
               style={{ borderColor: 'var(--t-border)' }}>
               <Brain size={24} style={{ color: 'var(--t-ghost)' }} />
             </div>
-            <span className="text-sm font-mono" style={{ color: 'var(--t-dim)' }}>
+            <span className="text-sm font-mono text-center px-8" style={{ color: 'var(--t-dim)' }}>
               Advance the simulation or inject a crisis to trigger the agent council debate.
             </span>
           </div>
         ) : (<>
+          {/* Previous cycle messages (collapsible) */}
+          {previousMessages && previousMessages.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowOldMessages(!showOldMessages)}
+                className="w-full flex items-center gap-2 px-5 py-2 transition-colors hover:bg-white/5"
+                style={{ background: 'var(--t-hover)' }}>
+                <ChevronDown size={12} className={`transition-transform ${showOldMessages ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--t-muted)' }} />
+                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>
+                  Previous Council Session ({previousMessages.length} messages)
+                </span>
+                <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
+              </button>
+              {showOldMessages && (
+                <div style={{ opacity: 0.6 }}>
+                  {previousMessages.map((msg, idx) => (
+                    <AgentMessage key={`prev-${msg.agentId}-${idx}`} agentId={msg.agentId} message={msg} isStreaming={false} />
+                  ))}
+                </div>
+              )}
+              <CycleSeparator label="Current Session" />
+            </>
+          )}
+
+          {/* Current cycle messages */}
           {agentMessages.map((msg, idx) => {
             const isLast = idx === agentMessages.length - 1;
             const streaming = isDebating && isLast && msg.text !== 'thinking';
@@ -180,7 +229,6 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
               />
             );
           })}
-          {/* Show executed actions AFTER all agent messages */}
           <ExecutedActions actions={executedActions} />
         </>)}
       </div>
@@ -198,11 +246,10 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
             placeholder="Type your advisory for the council..."
             className="flex-1 px-3 py-2 text-xs font-mono border outline-none transition-colors"
             style={{ background: 'var(--t-input)', borderColor: 'var(--t-border)', color: 'var(--t-text2)' }}
-            disabled={isDebating}
           />
           <button
             onClick={() => { if (advisoryText?.trim()) { onAdvisory?.(advisoryText.trim()); setAdvisoryText?.(''); } }}
-            disabled={!advisoryText?.trim() || isDebating}
+            disabled={!advisoryText?.trim()}
             className="tac-btn px-3"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,7 +269,7 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
         {showSuggestions && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {(suggestions || []).map(s => (
-              <button key={s} onClick={() => onAdvisory?.(s)} disabled={isDebating}
+              <button key={s} onClick={() => onAdvisory?.(s)}
                 className="text-[9px] font-mono px-2 py-1 border transition-all hover:border-white/30"
                 style={{ borderColor: 'var(--t-border)', color: 'var(--t-muted)' }}>{s}</button>
             ))}

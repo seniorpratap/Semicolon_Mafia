@@ -1,181 +1,100 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, MessageCircle, Users } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 import { useTypewriter } from '../hooks/useEffects';
 
-/**
- * Simple markdown renderer for agent messages
- * Handles **bold**, - bullet lists, numbered lists, line breaks
- */
-function renderMarkdown(text) {
-  if (!text) return null;
-
-  return text.split('\n').map((line, i) => {
-    // Parse **bold** within line
-    const parts = line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-      }
-      return part;
-    });
-
-    // Numbered list or bullet
-    const isBullet = line.match(/^[-•]\s/);
-    const isNumber = line.match(/^\d+\.\s/);
-
-    if (isBullet || isNumber) {
-      return <div key={i} className="pl-3 py-0.5 text-slate-400">{parts}</div>;
-    }
-
-    // Empty line = spacer
-    if (line.trim() === '') return <div key={i} className="h-1.5" />;
-
-    return <div key={i}>{parts}</div>;
-  });
-}
-
-/**
- * Single agent message with typewriter effect
- */
 function AgentMessage({ agentId, message }) {
   const agent = AGENTS[agentId];
-  const isThinking = message === 'thinking';
-  const { displayed, isDone } = useTypewriter(isThinking ? '' : message, 12, !isThinking);
+  const { displayed, isDone } = useTypewriter(message?.text || '', 15);
+  if (!message) return null;
+
+  const colorMap = {
+    0: 'border-l-red-400 bg-red-50/40',
+    1: 'border-l-amber-400 bg-amber-50/40',
+    2: 'border-l-blue-400 bg-blue-50/40',
+    3: 'border-l-violet-400 bg-violet-50/40',
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -16, scale: 0.97 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="rounded-xl p-3 border-l-[3px] bg-gradient-to-r"
-      style={{
-        borderLeftColor: agent.color,
-        backgroundImage: `linear-gradient(to right, ${agent.color}08, transparent)`,
-      }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`rounded-xl border border-slate-100 border-l-4 ${colorMap[agentId] || 'border-l-slate-300'} p-4`}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
-          style={{ background: `${agent.color}20` }}
-        >
-          {agent.emoji}
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center text-lg">
+          {agent?.icon || '🤖'}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold" style={{ color: agent.color }}>
-              {agent.name}
-            </span>
-            {isThinking && (
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="flex items-center gap-0.5"
-              >
-                <span className="w-1 h-1 rounded-full" style={{ background: agent.color }} />
-                <span className="w-1 h-1 rounded-full" style={{ background: agent.color }} />
-                <span className="w-1 h-1 rounded-full" style={{ background: agent.color }} />
-              </motion.div>
-            )}
-          </div>
-          <span className="text-[9px] text-slate-600">{agent.role} · {agent.priority.slice(0, 40)}...</span>
+        <div className="flex-1">
+          <div className="text-sm font-bold text-slate-800">{agent?.name || 'Agent'}</div>
+          <div className="text-[10px] text-slate-400 font-medium">{agent?.role || 'Advisor'}</div>
         </div>
-        {!isThinking && isDone && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
-            style={{ background: `${agent.color}20`, color: agent.color }}
-          >
-            ✓
-          </motion.div>
-        )}
+        {isDone && <CheckCircle2 size={16} className="text-emerald-500" />}
       </div>
 
-      {/* Body */}
-      {isThinking ? (
-        <div className="flex items-center gap-2 text-[11px] text-slate-500 pl-9">
-          <Loader2 size={11} className="animate-spin" style={{ color: agent.color }} />
-          <span>Analyzing situation data...</span>
+      {!isDone && displayed.length === 0 ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Loader2 size={14} className="animate-spin text-emerald-500" />
+          <span>Analyzing data...</span>
         </div>
       ) : (
-        <div className="pl-9">
-          <div className={`text-[11px] text-slate-300/90 leading-[1.7] ${!isDone ? 'cursor-blink' : ''}`}>
-            {renderMarkdown(displayed)}
-          </div>
+        <div className={`text-[13px] text-slate-600 leading-relaxed whitespace-pre-wrap ${!isDone ? 'cursor-blink' : ''}`}>
+          {displayed}
         </div>
       )}
     </motion.div>
   );
 }
 
-/**
- * AgentPanel — The debate arena
- */
 export default function AgentPanel({ agentMessages, isDebating, userAdvisory }) {
-  const agentOrder = ['health', 'economy', 'safety', 'coordinator'];
-  const hasMessages = Object.keys(agentMessages).length > 0;
-
   return (
-    <div className="glass rounded-2xl p-4 flex flex-col h-full">
+    <div className="card flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">🧠</span>
-          <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Agent Council</h3>
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+            <Users size={14} className="text-violet-600" />
+          </div>
+          <span className="text-sm font-bold text-slate-800">Agent Council</span>
         </div>
         {isDebating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-[10px] text-purple-300 font-medium">Deliberating</span>
-          </motion.div>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-200">
+            <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] font-semibold text-violet-600">Deliberating</span>
+          </div>
         )}
       </div>
 
-      {/* User Advisory Banner */}
+      {/* Advisory */}
       <AnimatePresence>
         {userAdvisory && (
           <motion.div
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            className="mb-3 flex-shrink-0"
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+            className="mx-5 mt-4 p-3 bg-teal-50 border border-teal-200 rounded-xl overflow-hidden"
           >
-            <div className="p-3 bg-cyan-500/8 border border-cyan-500/15 rounded-xl">
-              <div className="flex items-start gap-2">
-                <span className="text-xs mt-0.5">🗣️</span>
-                <div>
-                  <span className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wider">External Advisory</span>
-                  <p className="text-[11px] text-cyan-300/80 mt-0.5 leading-relaxed">"{userAdvisory}"</p>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 mb-1">
+              <MessageCircle size={12} className="text-teal-600" />
+              <span className="text-[10px] font-semibold text-teal-700 uppercase tracking-wider">Your Advisory</span>
             </div>
+            <p className="text-xs text-teal-800 italic">"{userAdvisory}"</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-0 scrollbar-thin">
-        <AnimatePresence mode="popLayout">
-          {agentOrder.map((agentId) => {
-            const message = agentMessages[agentId];
-            if (!message) return null;
-            return <AgentMessage key={agentId} agentId={agentId} message={message} />;
-          })}
-        </AnimatePresence>
-
-        {/* Empty State */}
-        {!hasMessages && !isDebating && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12 opacity-40">
-            <div className="text-4xl mb-3 animate-float">🧠</div>
-            <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
-              Advance the simulation or inject a crisis to trigger the agent council debate
-            </p>
+      <div className="flex-1 overflow-y-auto scroll-thin p-5 space-y-4">
+        {agentMessages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-slate-300">
+            <div className="w-20 h-20 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mb-4">
+              <Users size={28} className="text-slate-300" />
+            </div>
+            <span className="text-sm font-medium text-slate-400">Awaiting simulation data</span>
+            <span className="text-xs text-slate-300 mt-1">Launch and advance to trigger debate</span>
           </div>
+        ) : (
+          agentMessages.map((msg, idx) => (
+            <AgentMessage key={idx} agentId={msg.agentId} message={msg} />
+          ))
         )}
       </div>
     </div>

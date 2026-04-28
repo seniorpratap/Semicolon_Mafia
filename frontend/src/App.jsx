@@ -83,10 +83,10 @@ export default function App() {
   const suggestions = ['Quarantine hotspots immediately', 'Prioritize mass testing', 'Focus on economic stability', 'Deploy emergency vaccines', 'Set up field hospitals', 'Implement night curfew'];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#0a0a0a' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#000' }}>
 
       {/* ═══ HEADER ═══ */}
-      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: '#1a1a1a' }}>
+      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: '#2a2a2a' }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 border flex items-center justify-center" style={{ borderColor: '#2a2a2a' }}>
             <Brain size={16} className="text-red-500" />
@@ -99,7 +99,7 @@ export default function App() {
 
         <div className="flex items-center gap-6">
           {/* Threat pill */}
-          <div className="flex items-center gap-2 px-3 py-1 border" style={{ borderColor: threatColor }}>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border" style={{ borderColor: threatColor }}>
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: threatColor }} />
             <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: threatColor }}>
               Threat · {threat}
@@ -131,7 +131,7 @@ export default function App() {
         {crisisAlert && (
           <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
             className="absolute top-14 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 border"
-            style={{ background: '#1a0808', borderColor: '#ef4444' }}>
+            style={{ background: '#0a0000', borderColor: '#ef4444' }}>
             <AlertTriangle size={16} className="text-red-500" />
             <div>
               <div className="text-[9px] font-mono font-bold uppercase tracking-[0.15em] text-red-500">Crisis Injected</div>
@@ -146,12 +146,12 @@ export default function App() {
         <main className="flex-1 min-h-0 flex">
 
           {/* ── LEFT COLUMN ── */}
-          <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: '380px', borderColor: '#1a1a1a' }}>
+          <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: '380px', borderColor: '#2a2a2a' }}>
             {/* City Grid */}
             <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
 
             {/* Command Center */}
-            <div className="flex-1 border-t" style={{ borderColor: '#1a1a1a' }}>
+            <div className="flex-1 border-t" style={{ borderColor: '#2a2a2a' }}>
               <div className="tac-panel-header">
                 <span>Command Center</span>
               </div>
@@ -191,7 +191,7 @@ export default function App() {
                       {CRISIS_EVENTS.map(e => (
                         <button key={e.id} onClick={() => { crisis(e); setShowCrisis(false); }}
                           className="w-full text-left px-3 py-2 border transition-all hover:border-red-500/50"
-                          style={{ borderColor: '#1a1a1a', background: '#0f0f0f' }}>
+                          style={{ borderColor: '#2a2a2a', background: '#0f0f0f' }}>
                           <div className="text-xs font-bold text-white">{e.name}</div>
                           <div className="text-[10px] font-mono" style={{ color: '#6b7280' }}>{e.description}</div>
                         </button>
@@ -244,7 +244,7 @@ export default function App() {
           </div>
 
           {/* ── RIGHT: Live Intelligence ── */}
-          <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: '360px', borderColor: '#1a1a1a' }}>
+          <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: '360px', borderColor: '#2a2a2a' }}>
             <div className="tac-panel-header">
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Live Intelligence
@@ -257,17 +257,17 @@ export default function App() {
               <MetricBox label="Active Cases" value={cs.totalInfected} color="#ef4444" icon={<Zap size={12} />} />
               <MetricBox label="Casualties" value={cs.totalDeceased} color="#6b7280" icon={<Users size={12} />} />
               <MetricBox label="Recovered" value={cs.totalRecovered} color="#10b981" icon={<Heart size={12} />} />
-              <MetricBox label="Hospital Load" value={`${Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)} %`} color="#6366f1" icon={<Shield size={12} />} isStr />
+              <MetricBox label="Hospital Load" value={`${Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)} %`} color="#8b5cf6" icon={<Shield size={12} />} isStr />
             </div>
 
             {/* Gauges */}
-            <div className="grid grid-cols-2 border-t" style={{ borderColor: '#1a1a1a' }}>
+            <div className="grid grid-cols-2 border-t" style={{ borderColor: '#2a2a2a' }}>
               <GaugeRow label="Economy" value={Math.round(cs.economyIndex)} color="#f59e0b" />
-              <GaugeRow label="Morale" value={Math.round(cs.publicMorale)} color="#6366f1" />
+              <GaugeRow label="Morale" value={Math.round(cs.publicMorale)} color="#8b5cf6" />
             </div>
 
             {/* Infection Curve */}
-            <div className="border-t px-4 py-3" style={{ borderColor: '#1a1a1a' }}>
+            <div className="border-t px-4 py-3" style={{ borderColor: '#2a2a2a' }}>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: '#9ca3af' }}>Infection Curve</span>
                 <div className="flex gap-3">
@@ -296,12 +296,12 @@ export default function App() {
             </div>
 
             {/* Stability Index */}
-            <div className="border-t px-4 py-3" style={{ borderColor: '#1a1a1a' }}>
+            <div className="border-t px-4 py-3" style={{ borderColor: '#2a2a2a' }}>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: '#9ca3af' }}>Stability Index</span>
                 <div className="flex gap-3">
                   <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#f59e0b' }}>— Economy</span>
-                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#6366f1' }}>— Morale</span>
+                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#8b5cf6' }}>— Morale</span>
                 </div>
               </div>
               <div className="h-20">
@@ -309,7 +309,7 @@ export default function App() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={history.slice(-50)} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                       <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2, fill: '#f59e0b' }} />
-                      <Line type="monotone" dataKey="morale" stroke="#6366f1" strokeWidth={1.5} dot={{ r: 2, fill: '#6366f1' }} />
+                      <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={1.5} dot={{ r: 2, fill: '#8b5cf6' }} />
                       <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
                       <Tooltip content={<TacTooltip />} />
                     </LineChart>
@@ -321,7 +321,7 @@ export default function App() {
             </div>
 
             {/* Zone Summary */}
-            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: '#1a1a1a' }}>
+            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: '#2a2a2a' }}>
               <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>Zones affected: <span className="text-white font-bold">{cs.activeZones}/36</span></span>
               <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>Under lockdown: <span className="text-white font-bold">{cs.lockdownZones}</span></span>
             </div>
@@ -335,7 +335,7 @@ export default function App() {
 
       {/* ═══ FOOTER ═══ */}
       <footer className="h-[32px] flex-shrink-0 flex items-center justify-between px-5 border-t text-[9px] font-mono uppercase tracking-[0.15em]"
-        style={{ borderColor: '#1a1a1a', color: '#4b5563' }}>
+        style={{ borderColor: '#2a2a2a', color: '#4b5563' }}>
         <span>SIR Model v2.0 · Grid: 6×6 (36 Zones) · Pop: 1,200,000</span>
         <span>Agents: 4 Active · Decisions: {debates.length} · TechFusion 2.0 — Intelligent Systems</span>
       </footer>

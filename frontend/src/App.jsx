@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio } from 'lucide-react';
+import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 import CityGrid from './components/CityGrid';
@@ -32,6 +32,7 @@ export default function App() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState('');
+  const [darkMode, setDarkMode] = useState(true);
   const intervalRef = useRef(null);
   const demoRef = useRef(false);
   const demoAbortRef = useRef(null);
@@ -60,7 +61,13 @@ export default function App() {
     const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
     const msgs = [];
     const debate = await runAgentDebate(s, simState.zones, simState.day, rd, adv || latestAdvisory,
-      (id, text) => { msgs.push({ agentId: id, text }); setAgentMessages([...msgs]); }
+      (id, text) => {
+        // Upsert: update existing agent entry or add new one
+        const idx = msgs.findIndex(m => m.agentId === id);
+        if (idx >= 0) { msgs[idx] = { agentId: id, text }; }
+        else { msgs.push({ agentId: id, text }); }
+        setAgentMessages([...msgs]);
+      }
     );
     const actions = parseDecisionAction(debate.coordinator);
     let ns = simState;
@@ -119,7 +126,15 @@ export default function App() {
       setIsDebating(true); setIsPaused(true); setAgentMessages([]);
       const s1 = getStats(simState);
       const debate1 = await runAgentDebate(s1, simState.zones, simState.day, [], '',
-        (id, text) => { setAgentMessages(prev => { const filtered = prev.filter(m => m.agentId !== id || text === 'thinking'); return [...filtered, { agentId: id, text }]; }); }
+        (id, text) => {
+          setAgentMessages(prev => {
+            const idx = prev.findIndex(m => m.agentId === id);
+            const updated = [...prev];
+            if (idx >= 0) { updated[idx] = { agentId: id, text }; }
+            else { updated.push({ agentId: id, text }); }
+            return updated;
+          });
+        }
       );
       if (!demoRef.current) return;
       const actions1 = parseDecisionAction(debate1.coordinator);
@@ -169,7 +184,15 @@ export default function App() {
         const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
 
         const debate = await runAgentDebate(stats, currentState.zones, currentState.day, rd, '',
-          (id, text) => { setAgentMessages(prev => { const filtered = prev.filter(m => m.agentId !== id || text === 'thinking'); return [...filtered, { agentId: id, text }]; }); }
+          (id, text) => {
+            setAgentMessages(prev => {
+              const idx = prev.findIndex(m => m.agentId === id);
+              const updated = [...prev];
+              if (idx >= 0) { updated[idx] = { agentId: id, text }; }
+              else { updated.push({ agentId: id, text }); }
+              return updated;
+            });
+          }
         );
         if (!demoRef.current) return;
 
@@ -201,8 +224,13 @@ export default function App() {
 
   const suggestions = ['Quarantine hotspots immediately', 'Prioritize mass testing', 'Focus on economic stability', 'Deploy emergency vaccines', 'Set up field hospitals', 'Implement night curfew'];
 
+  // Apply theme to body
+  useEffect(() => {
+    document.body.classList.toggle('light', !darkMode);
+  }, [darkMode]);
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#000' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: darkMode ? '#000' : '#f5f5f5' }}>
 
       {/* ═══ HEADER ═══ */}
       <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: '#2a2a2a' }}>
@@ -245,9 +273,17 @@ export default function App() {
           })}
         </div>
 
-        <div className="text-right">
-          <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: '#6b7280' }}>Day</div>
-          <div className="text-2xl font-black font-mono text-white tracking-tighter leading-none">{dayStr}</div>
+        <div className="flex items-center gap-4">
+          {/* Dark/Light toggle */}
+          <button onClick={() => setDarkMode(!darkMode)}
+            className="w-8 h-8 border flex items-center justify-center transition-colors hover:bg-white/10"
+            style={{ borderColor: '#2a2a2a' }}>
+            {darkMode ? <Sun size={14} style={{ color: '#f59e0b' }} /> : <Moon size={14} style={{ color: '#6366f1' }} />}
+          </button>
+          <div className="text-right">
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: '#6b7280' }}>Day</div>
+            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: darkMode ? '#fff' : '#000' }}>{dayStr}</div>
+          </div>
         </div>
       </header>
 
@@ -349,48 +385,23 @@ export default function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {/* Advisory */}
-                <div className="pt-1">
-                  <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5" style={{ color: '#6b7280' }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-white" /> Your Advisory
-                  </div>
-                  <div className="flex gap-2">
-                    <input value={advisoryText} onChange={e => setAdvisoryText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && advisoryText.trim()) { advisory(advisoryText.trim()); setAdvisoryText(''); } }}
-                      placeholder="Advise the council..."
-                      className="flex-1 px-3 py-2 text-xs font-mono border outline-none transition-colors"
-                      style={{ background: '#0f0f0f', borderColor: '#2a2a2a', color: '#e5e5e5' }}
-                      disabled={isDebating} />
-                    <button onClick={() => { if (advisoryText.trim()) { advisory(advisoryText.trim()); setAdvisoryText(''); } }}
-                      disabled={!advisoryText.trim() || isDebating}
-                      className="tac-btn px-3"><Send size={12} /></button>
-                  </div>
-                  <button onClick={() => setShowSuggestions(!showSuggestions)}
-                    className="text-[9px] font-mono uppercase tracking-[0.12em] mt-2 flex items-center gap-1 transition-colors"
-                    style={{ color: '#6b7280' }}>
-                    <ChevronDown size={10} className={`transition-transform ${showSuggestions ? 'rotate-180' : ''}`} />
-                    Show Quick Suggestions
-                  </button>
-                  <AnimatePresence>
-                    {showSuggestions && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-1.5 flex flex-wrap gap-1">
-                        {suggestions.map(s => (
-                          <button key={s} onClick={() => advisory(s)} disabled={isDebating}
-                            className="text-[9px] font-mono px-2 py-1 border transition-all hover:border-white/30"
-                            style={{ borderColor: '#2a2a2a', color: '#9ca3af' }}>{s}</button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
               </div>
             </div>
           </div>
 
           {/* ── CENTER: Agent Council ── */}
           <div className="flex-1 flex flex-col min-h-0">
-            <AgentPanel agentMessages={agentMessages} isDebating={isDebating} userAdvisory={latestAdvisory} />
+            <AgentPanel
+              agentMessages={agentMessages}
+              isDebating={isDebating}
+              userAdvisory={latestAdvisory}
+              advisoryText={advisoryText}
+              setAdvisoryText={setAdvisoryText}
+              onAdvisory={(t) => { advisory(t); setAdvisoryText(''); }}
+              suggestions={suggestions}
+              showSuggestions={showSuggestions}
+              setShowSuggestions={setShowSuggestions}
+            />
           </div>
 
           {/* ── RIGHT: Live Intelligence ── */}

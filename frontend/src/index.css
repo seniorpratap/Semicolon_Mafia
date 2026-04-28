@@ -20,6 +20,10 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 0; }
+
+  /* ── Light Mode ── */
+  body.light { background: #f5f5f5; color: #1a1a1a; }
+  body.light ::-webkit-scrollbar-thumb { background: #d4d4d4; }
 }
 
 /* ── Panel ─── */
@@ -29,6 +33,7 @@
   color: #a0a0a0;
   border-bottom: 1px solid #2a2a2a;
 }
+body.light .tac-panel-header { color: #6b7280; border-color: #e5e5e5; }
 
 /* ── Buttons ─── */
 .tac-btn {
@@ -40,6 +45,8 @@
 }
 .tac-btn:hover { background: #1a1a1a; color: #fff; }
 .tac-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+body.light .tac-btn { border-color: #d4d4d4; color: #6b7280; }
+body.light .tac-btn:hover { background: #e5e5e5; color: #000; }
 
 .tac-btn-primary {
   @apply px-4 py-2.5 text-[10px] font-bold uppercase font-mono transition-all duration-150;
@@ -50,6 +57,8 @@
 }
 .tac-btn-primary:hover { background: #e5e5e5; }
 .tac-btn-primary:disabled { opacity: 0.3; }
+body.light .tac-btn-primary { border-color: #000; background: #000; color: #fff; }
+body.light .tac-btn-primary:hover { background: #333; }
 
 .tac-btn-danger {
   @apply px-4 py-2.5 text-[10px] font-bold uppercase font-mono transition-all duration-150;
@@ -72,12 +81,19 @@
 .grid-cell-low { background: rgba(16,185,129,0.08); }
 .grid-cell-med { background: rgba(245,158,11,0.1); }
 .grid-cell-hi { background: rgba(239,68,68,0.12); }
+body.light .grid-cell { border-color: #e5e5e5; background: #fff; }
+body.light .grid-cell:hover { box-shadow: inset 0 0 0 1px #000; }
+body.light .grid-cell-clr { background: #fff; }
+body.light .grid-cell-low { background: rgba(16,185,129,0.06); }
+body.light .grid-cell-med { background: rgba(245,158,11,0.08); }
+body.light .grid-cell-hi { background: rgba(239,68,68,0.08); }
 
 /* ── Metric Box ─── */
 .metric-box {
   border: 1px solid #2a2a2a;
   padding: 12px 16px;
 }
+body.light .metric-box { border-color: #e5e5e5; }
 
 /* ── Scroll ─── */
 .scroll-y { overflow-y: auto; }
@@ -86,7 +102,26 @@
 
 /* ── Gauge ─── */
 .gauge-track { height: 4px; background: #1a1a1a; width: 100%; }
+body.light .gauge-track { background: #e5e5e5; }
 
 /* ── Cursor blink ─── */
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 .cursor-blink::after { content:'▊'; color: #10b981; margin-left: 2px; animation: blink 0.8s step-end infinite; }
+
+/* ── Dots Loader (thinking indicator) ─── */
+.dots-loader { display: inline-flex; gap: 4px; align-items: center; }
+.dots-loader span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; opacity: 0.4;
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+.dots-loader span:nth-child(1) { animation-delay: 0s; }
+.dots-loader span:nth-child(2) { animation-delay: 0.16s; }
+.dots-loader span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes dot-bounce {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ── Light mode theme overrides ── */
+body.light { --tw-bg-opacity: 1; }

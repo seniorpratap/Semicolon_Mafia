@@ -340,39 +340,83 @@ export async function runAgentDebate(stats, zones, day, recentDecisions = [], us
 }
 
 // ─── Parse Coordinator Decision into Action ───────────────
-export function parseDecisionAction(coordinatorResponse) {
+export function parseDecisionAction(coordinatorResponse, zones = []) {
   const text = coordinatorResponse.toLowerCase();
   const actions = [];
 
+  // Helper: resolve zone IDs to names
+  const zoneLabel = (ids) => ids.map(id => {
+    const z = zones.find(z => z.id === id);
+    return z ? `${z.name} (Zone ${id})` : `Zone ${id}`;
+  }).join(', ');
+
+  // Try to extract zone names mentioned in text
+  const extractZoneIds = () => {
+    const idMatches = coordinatorResponse.match(/zone\s*(\d+)/gi) || [];
+    const ids = [...new Set(idMatches.map(m => parseInt(m.replace(/zone\s*/i, ''))))];
+    // Also try to find named zones
+    if (ids.length === 0 && zones.length > 0) {
+      const namedMatches = zones.filter(z => text.includes(z.name.toLowerCase()));
+      if (namedMatches.length > 0) return namedMatches.map(z => z.id);
+    }
+    return ids;
+  };
+
   if (text.includes('full lockdown') || text.includes('complete lockdown')) {
-    const zoneMatches = coordinatorResponse.match(/zone\s*(\d+)/gi) || [];
-    const zoneIds = zoneMatches.map(m => parseInt(m.replace(/zone\s*/i, '')));
+    const zoneIds = extractZoneIds();
     if (zoneIds.length > 0) {
-      actions.push({ action: 'lockdown', targetZones: zoneIds, level: 2, summary: `Full lockdown: Zones ${zoneIds.join(', ')}` });
+      actions.push({ action: 'lockdown', targetZones: zoneIds, level: 2,
+        summary: `Full lockdown enforced in ${zoneLabel(zoneIds)}`,
+        detail: 'All non-essential movement restricted. Supply corridors maintained.'
+      });
     }
   }
 
   if (text.includes('partial lockdown') || text.includes('targeted lockdown') || text.includes('restricted movement')) {
-    const zoneMatches = coordinatorResponse.match(/zone\s*(\d+)/gi) || [];
-    const zoneIds = zoneMatches.map(m => parseInt(m.replace(/zone\s*/i, '')));
+    const zoneIds = extractZoneIds();
     if (zoneIds.length > 0) {
-      actions.push({ action: 'partial_lockdown', targetZones: zoneIds, summary: `Partial lockdown: Zones ${zoneIds.join(', ')}` });
+      actions.push({ action: 'partial_lockdown', targetZones: zoneIds,
+        summary: `Partial restrictions in ${zoneLabel(zoneIds)}`,
+        detail: 'Non-essential businesses closed. Essential corridors remain open.'
+      });
     }
   }
 
   if (text.includes('vaccin')) {
-    const zoneMatches = coordinatorResponse.match(/zone\s*(\d+)/gi) || [];
-    const zoneIds = zoneMatches.map(m => parseInt(m.replace(/zone\s*/i, '')));
-    actions.push({ action: 'vaccinate', targetZones: zoneIds.length > 0 ? zoneIds : [0, 1, 2], summary: `Vaccination drive` });
+    const zoneIds = extractZoneIds();
+    const targets = zoneIds.length > 0 ? zoneIds : zones.filter(z => z.infected > 50).slice(0, 3).map(z => z.id);
+    actions.push({ action: 'vaccinate', targetZones: targets,
+      summary: `Vaccination drive deployed to ${zoneLabel(targets)}`,
+      detail: 'Priority: healthcare workers, elderly, high-density areas.'
+    });
   }
 
   if (text.includes('expand hospital') || text.includes('increase capacity') || text.includes('field hospital') || text.includes('additional beds')) {
-    actions.push({ action: 'expand_hospital', targetZones: [7, 15, 28], summary: 'Hospital capacity expanded' });
+    const hospitalZones = zones.filter(z => z.hospitalCapacity > 0).slice(0, 3).map(z => z.id);
+    actions.push({ action: 'expand_hospital', targetZones: hospitalZones,
+      summary: `Hospital capacity expanded in ${zoneLabel(hospitalZones)}`,
+      detail: '+200 emergency beds deployed. Field hospitals activated.'
+    });
   }
 
   if (text.includes('testing') || text.includes('mass test')) {
-    actions.push({ action: 'testing', targetZones: [0, 1, 2, 3], summary: 'Mass testing deployed' });
+    const zoneIds = extractZoneIds();
+    const targets = zoneIds.length > 0 ? zoneIds : zones.filter(z => z.infected > 20).slice(0, 4).map(z => z.id);
+    actions.push({ action: 'testing', targetZones: targets,
+      summary: `Mass testing deployed to ${zoneLabel(targets)}`,
+      detail: 'Door-to-door rapid antigen testing. Results within 24hrs.'
+    });
+  }
+
+  // If coordinator made a decision but we couldn't parse specific actions, add a generic
+  if (actions.length === 0 && text.includes('decision')) {
+    actions.push({ action: 'monitoring',
+      summary: 'Enhanced surveillance and monitoring activated',
+      detail: 'All zones under increased watch. Preparatory measures initiated.',
+      targetZones: []
+    });
   }
 
   return actions;
 }
+

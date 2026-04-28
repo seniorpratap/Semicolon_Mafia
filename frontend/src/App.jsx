@@ -75,7 +75,7 @@ export default function App() {
         setAgentMessages([...msgs]);
       }
     );
-    const actions = parseDecisionAction(debate.coordinator);
+    const actions = parseDecisionAction(debate.coordinator, simState.zones);
     let ns = simState;
     actions.forEach(a => { ns = applyDecision(ns, a); });
     setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setLatestAdvisory('');

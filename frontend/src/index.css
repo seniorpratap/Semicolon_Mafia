@@ -147,3 +147,15 @@ body.light .resize-handle:hover::before { background: #FF6B35; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ── Action Card Enter ─── */
+.action-card-enter {
+  animation: actionSlideIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes actionSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Monitoring action ─── */
+.action-card-enter + .action-card-enter { margin-top: 0; }

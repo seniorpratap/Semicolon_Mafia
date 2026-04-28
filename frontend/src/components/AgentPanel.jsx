@@ -102,18 +102,23 @@ function ExecutedActions({ actions }) {
         {actions.map((action, i) => {
           const meta = ACTION_META[action.action] || { icon: '⚡', label: action.action.toUpperCase(), color: 'var(--t-muted)', bg: 'var(--t-hover)' };
           return (
-            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border"
-              style={{ borderColor: meta.color, background: meta.bg, borderLeftWidth: '3px' }}>
-              <span className="text-lg">{meta.icon}</span>
+            <div key={i} className="flex items-start gap-3 px-3 py-3 border action-card-enter"
+              style={{ borderColor: meta.color, background: meta.bg, borderLeftWidth: '3px', animationDelay: `${i * 150}ms` }}>
+              <span className="text-lg mt-0.5">{meta.icon}</span>
               <div className="flex-1">
                 <div className="text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: meta.color }}>
                   {meta.label}
                 </div>
-                <div className="text-[11px] font-mono" style={{ color: 'var(--t-text2)' }}>
+                <div className="text-[12px] font-mono mt-0.5" style={{ color: 'var(--t-text)' }}>
                   {action.summary}
                 </div>
+                {action.detail && (
+                  <div className="text-[10px] font-mono mt-1" style={{ color: 'var(--t-muted)' }}>
+                    ↳ {action.detail}
+                  </div>
+                )}
               </div>
-              <span className="text-[9px] font-mono px-2 py-0.5 border" style={{ borderColor: meta.color, color: meta.color }}>
+              <span className="text-[9px] font-mono font-bold px-2 py-0.5 border mt-0.5" style={{ borderColor: meta.color, color: meta.color }}>
                 APPLIED
               </span>
             </div>

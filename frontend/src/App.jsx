@@ -57,7 +57,16 @@ export default function App() {
     }
   }, [simState.day]);
 
-  const tick = useCallback(() => setSimState(p => advanceDay(p)), []);
+  const tick = useCallback(() => {
+    setSimState(p => {
+      const next = advanceDay(p);
+      // Auto-trigger council debate every 5 days during normal play
+      if (next.day > 0 && next.day % 5 === 0 && !debateAbortRef.current) {
+        setTimeout(() => triggerDebate(), 300);
+      }
+      return next;
+    });
+  }, [triggerDebate]);
 
   useEffect(() => {
     if (isRunning && !isPaused && !isDebating) intervalRef.current = setInterval(tick, 1000);

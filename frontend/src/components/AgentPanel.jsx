@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Send, Keyboard } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 import { useTypewriter } from '../hooks/useEffects';
 
@@ -81,9 +82,35 @@ function AgentMessage({ agentId, message }) {
 /**
  * AgentPanel — The debate arena
  */
-export default function AgentPanel({ agentMessages, isDebating, userAdvisory }) {
+export default function AgentPanel({ agentMessages, isDebating, userAdvisory, onUserAdvisory }) {
   const agentOrder = ['health', 'economy', 'safety', 'coordinator'];
   const hasMessages = Object.keys(agentMessages).length > 0;
+  const [advisoryText, setAdvisoryText] = useState('');
+  const [showPresets, setShowPresets] = useState(false);
+  const messagesContainerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const presets = [
+    'Close all schools and colleges immediately',
+    'Deploy military for medical supply distribution',
+    'Prioritize economy - avoid full lockdowns',
+    'Start mass vaccination in worst-hit zones',
+    'Evacuate the hotspot zones to safer areas',
+    'Set up field hospitals in parking lots',
+    'Enforce night curfew across all zones',
+    'Open borders for humanitarian aid',
+  ];
+
+  const handleAdvisory = () => {
+    if (!advisoryText.trim()) return;
+    onUserAdvisory(advisoryText.trim());
+    setAdvisoryText('');
+  };
+
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [agentMessages, isDebating]);
 
   return (
     <div className="glass rounded-2xl p-4 flex flex-col h-full">
@@ -128,7 +155,10 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory }) 
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-0 scrollbar-thin">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-0 scrollbar-thin"
+      >
         <AnimatePresence mode="popLayout">
           {agentOrder.map((agentId) => {
             const message = agentMessages[agentId];
@@ -146,6 +176,67 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory }) 
             </p>
           </div>
         )}
+        <div ref={messagesEndRef} />
+      </div>
+      
+      {/* Advisory Chat Input */}
+      <div className="mt-3 pt-3 border-t border-white/[0.04] flex-shrink-0">
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[10px]">💬</span>
+          <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Message Council</span>
+        </div>
+        <div className="flex gap-1.5">
+          <input
+            value={advisoryText}
+            onChange={(e) => setAdvisoryText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdvisory()}
+            placeholder="Type a message to the agents..."
+            disabled={isDebating}
+            className="flex-1 bg-surface/50 rounded-lg px-3 py-2 text-[11px] text-white placeholder-slate-600
+                       outline-none border border-white/[0.04] focus:border-cyan-500/30 transition-colors disabled:opacity-30"
+          />
+          <button
+            onClick={handleAdvisory}
+            disabled={!advisoryText.trim() || isDebating}
+            className="px-3 py-2 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20
+                       hover:bg-cyan-500/20 transition-all disabled:opacity-30"
+            aria-label="Send advisory message"
+          >
+            <Send size={12} />
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowPresets(!showPresets)}
+          className="mt-2 flex items-center gap-1 text-[9px] text-slate-600 hover:text-slate-400 transition-colors"
+        >
+          <Keyboard size={10} />
+          {showPresets ? 'Hide' : 'Show'} quick suggestions
+        </button>
+
+        <AnimatePresence>
+          {showPresets && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-1.5 flex flex-wrap gap-1 overflow-hidden"
+            >
+              {presets.map(p => (
+                <button
+                  key={p}
+                  onClick={() => { onUserAdvisory(p); setShowPresets(false); }}
+                  disabled={isDebating}
+                  className="px-2 py-1 bg-surface/40 text-[9px] text-slate-500 rounded-md
+                             border border-white/[0.03] hover:border-cyan-500/20 hover:text-cyan-400
+                             transition-all disabled:opacity-30"
+                >
+                  {p}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

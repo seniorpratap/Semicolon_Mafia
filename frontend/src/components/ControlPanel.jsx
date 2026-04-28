@@ -1,31 +1,18 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, FastForward, Zap, Send, RotateCcw, ChevronDown, Keyboard } from 'lucide-react';
+import { Play, Pause, FastForward, Zap, RotateCcw, ChevronDown } from 'lucide-react';
 import { CRISIS_EVENTS } from '../engine/simulation';
 
 export default function ControlPanel({
   isRunning, isPaused, day, onPlay, onPause, onAdvance,
-  onInjectCrisis, onUserAdvisory, onReset, isDebating,
+  onInjectCrisis, onReset, isDebating, tickMs, onTickSpeedChange,
 }) {
-  const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
-  const [showPresets, setShowPresets] = useState(false);
-
-  const handleAdvisory = () => {
-    if (!advisoryText.trim()) return;
-    onUserAdvisory(advisoryText.trim());
-    setAdvisoryText('');
-  };
-
-  const presets = [
-    'Close all schools and colleges immediately',
-    'Deploy military for medical supply distribution',
-    'Prioritize economy — avoid full lockdowns',
-    'Start mass vaccination in worst-hit zones',
-    'Evacuate the hotspot zones to safer areas',
-    'Set up field hospitals in parking lots',
-    'Enforce night curfew across all zones',
-    'Open borders for humanitarian aid',
+  const speedPresets = [
+    { label: '0.5x', value: 1600 },
+    { label: '1x', value: 800 },
+    { label: '2x', value: 400 },
+    { label: '4x', value: 200 },
   ];
 
   return (
@@ -72,6 +59,29 @@ export default function ControlPanel({
         <FastForward size={13} /> Advance 5 Days + Council Debate
       </button>
 
+      {/* Tick Speed */}
+      <div className="bg-surface/40 rounded-xl border border-white/[0.03] p-2.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[9px] text-slate-500 uppercase tracking-wider">Tick Speed</span>
+          <span className="text-[9px] font-mono text-slate-400">{(800 / tickMs).toFixed(tickMs === 1600 ? 1 : 0)}x</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {speedPresets.map((preset) => (
+            <button
+              key={preset.value}
+              onClick={() => onTickSpeedChange?.(preset.value)}
+              className={`px-2 py-1 rounded-md text-[10px] border transition-all ${
+                tickMs === preset.value
+                  ? 'bg-primary/20 border-primary/40 text-primary-light'
+                  : 'bg-surface/50 border-white/[0.05] text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Divider */}
       <div className="border-t border-white/[0.04]" />
 
@@ -109,68 +119,6 @@ export default function ControlPanel({
         </AnimatePresence>
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-white/[0.04]" />
-
-      {/* User Advisory */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[10px]">💬</span>
-          <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Your Advisory</span>
-        </div>
-        <div className="flex gap-1.5">
-          <input
-            value={advisoryText}
-            onChange={(e) => setAdvisoryText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdvisory()}
-            placeholder="Advise the council..."
-            disabled={isDebating}
-            className="flex-1 bg-surface/50 rounded-lg px-3 py-2 text-[11px] text-white placeholder-slate-600
-                       outline-none border border-white/[0.04] focus:border-cyan-500/30 transition-colors disabled:opacity-30"
-          />
-          <button
-            onClick={handleAdvisory}
-            disabled={!advisoryText.trim() || isDebating}
-            className="px-3 py-2 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20
-                       hover:bg-cyan-500/20 transition-all disabled:opacity-30"
-          >
-            <Send size={12} />
-          </button>
-        </div>
-
-        {/* Preset Toggle */}
-        <button
-          onClick={() => setShowPresets(!showPresets)}
-          className="mt-2 flex items-center gap-1 text-[9px] text-slate-600 hover:text-slate-400 transition-colors"
-        >
-          <Keyboard size={10} />
-          {showPresets ? 'Hide' : 'Show'} quick suggestions
-        </button>
-
-        <AnimatePresence>
-          {showPresets && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-1.5 flex flex-wrap gap-1 overflow-hidden"
-            >
-              {presets.map(p => (
-                <button
-                  key={p}
-                  onClick={() => { onUserAdvisory(p); setShowPresets(false); }}
-                  disabled={isDebating}
-                  className="px-2 py-1 bg-surface/40 text-[9px] text-slate-500 rounded-md
-                             border border-white/[0.03] hover:border-cyan-500/20 hover:text-cyan-400
-                             transition-all disabled:opacity-30"
-                >
-                  {p}
-                </button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }

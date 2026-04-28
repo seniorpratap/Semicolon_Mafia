@@ -1,12 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Activity, GitBranch } from 'lucide-react';
+import { Brain, Activity, GitBranch, ClipboardList, Moon, Sun } from 'lucide-react';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
 import StatsPanel from './components/StatsPanel';
 import ControlPanel from './components/ControlPanel';
 import DecisionLog from './components/DecisionLog';
+import AfterActionReport from './components/AfterActionReport';
 
 import { createSimState, advanceDay, applyDecision, getStats } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
@@ -17,6 +18,7 @@ import './index.css';
 const TABS = [
   { id: 'sim', label: 'Simulation', icon: Activity },
   { id: 'decisions', label: 'Decision Log', icon: GitBranch },
+  { id: 'report', label: 'After-Action', icon: ClipboardList },
 ];
 
 export default function App() {
@@ -31,7 +33,21 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [activeTab, setActiveTab] = useState('sim');
   const [latestAdvisory, setLatestAdvisory] = useState('');
+  const [agentMemory, setAgentMemory] = useState({});
+  const [theme, setTheme] = useState(() => localStorage.getItem('simulcrisis-theme') || 'dark');
+  const [tickMs, setTickMs] = useState(() => {
+    const saved = Number(localStorage.getItem('simulcrisis-tick-ms'));
+    return Number.isFinite(saved) && saved > 0 ? saved : 800;
+  });
   const intervalRef = useRef(null);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('simulcrisis-theme', theme);
+  }, [theme]);
+  useEffect(() => {
+    localStorage.setItem('simulcrisis-tick-ms', String(tickMs));
+  }, [tickMs]);
+
 
   const currentStats = getStats(simState);
 
@@ -57,12 +73,12 @@ export default function App() {
 
   useEffect(() => {
     if (isRunning && !isPaused && !isDebating) {
-      intervalRef.current = setInterval(tickSimulation, 800);
+      intervalRef.current = setInterval(tickSimulation, tickMs);
     } else {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, isPaused, isDebating, tickSimulation]);
+  }, [isRunning, isPaused, isDebating, tickSimulation, tickMs]);
 
   // ── Trigger agent debate ──
   const triggerDebate = useCallback(async (advisory = '') => {
@@ -85,7 +101,8 @@ export default function App() {
       advisory || latestAdvisory,
       (agentId, message) => {
         setAgentMessages(prev => ({ ...prev, [agentId]: message }));
-      }
+      },
+      agentMemory,
     );
 
     // Parse and apply coordinator's decision
@@ -97,9 +114,12 @@ export default function App() {
     setSimState(newState);
 
     setDebates(prev => [...prev, debate]);
+    if (debate.updatedMemory) {
+      setAgentMemory(debate.updatedMemory);
+    }
     setIsDebating(false);
     setLatestAdvisory('');
-  }, [simState, debates, latestAdvisory]);
+  }, [simState, debates, latestAdvisory, agentMemory]);
 
   // ── Advance 5 days + trigger debate ──
   const handleAdvance = useCallback(async () => {
@@ -146,7 +166,55 @@ export default function App() {
     setIsDebating(false);
     setSelectedZone(null);
     setLatestAdvisory('');
+    setAgentMemory({});
   };
+
+  const report = useMemo(() => {
+    if (!history.length) return null;
+
+    const peakInfected = history.reduce((max, row) => Math.max(max, row.infected), 0);
+    const final = history[history.length - 1];
+    const hospitalUtilization = Math.round((currentStats.hospitalLoad / currentStats.hospitalCapacity) * 100);
+    const coordinatorDecisions = debates.map(d => d.coordinator?.toLowerCase() || '');
+    const lockdownLean = coordinatorDecisions.filter(text => text.includes('lockdown')).length;
+    const healthEmergencyLean = coordinatorDecisions.filter(text => text.includes('hospital') || text.includes('capacity')).length;
+
+    const successes = [];
+    if (final.infected < peakInfected * 0.7) successes.push('Infection curve cooled down after interventions.');
+    if (final.deceased < peakInfected * 0.15) successes.push('Fatality growth remained relatively controlled.');
+    if (final.economy > 70) successes.push('Economic index stayed above high-risk collapse territory.');
+    if (currentStats.lockdownZones <= 10) successes.push('Restrictions remained targeted rather than city-wide.');
+    if (successes.length === 0) successes.push('Council kept the system operational under sustained pressure.');
+
+    const risks = [];
+    if (hospitalUtilization > 90) risks.push('Hospitals are close to saturation; surge capacity remains a risk.');
+    if (final.economy < 60) risks.push('Economic resilience is weak and may destabilize compliance.');
+    if (final.morale < 60) risks.push('Low public morale can reduce policy compliance.');
+    if (currentStats.totalInfected > 15000) risks.push('Community transmission remains widespread.');
+    if (risks.length === 0) risks.push('No critical system-level red flags at this point in the run.');
+
+    let patternSummary = 'Coordinator balanced inputs across health, economy, and safety.';
+    if (lockdownLean >= Math.ceil(Math.max(1, debates.length) * 0.6)) {
+      patternSummary = 'Coordinator repeatedly favored containment-heavy decisions, prioritizing outbreak suppression.';
+    } else if (healthEmergencyLean >= Math.ceil(Math.max(1, debates.length) * 0.5)) {
+      patternSummary = 'Coordinator emphasized hospital capacity protection in most decisions.';
+    }
+
+    return {
+      day: currentStats.day,
+      totalDebates: debates.length,
+      peakInfected,
+      finalInfected: currentStats.totalInfected,
+      totalRecovered: currentStats.totalRecovered,
+      totalDeceased: currentStats.totalDeceased,
+      finalEconomy: currentStats.economyIndex,
+      finalMorale: currentStats.publicMorale,
+      hospitalUtilization,
+      successes,
+      risks,
+      patternSummary,
+    };
+  }, [history, currentStats, debates]);
 
   // ── Auto-trigger debate every 10 days ──
   useEffect(() => {
@@ -197,7 +265,7 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Live Indicator */}
+          {/* Live Indicator + Theme */}
           <div className="flex items-center gap-2">
             {isRunning && !isPaused && (
               <span className="flex items-center gap-1.5 text-xs text-emerald-400">
@@ -208,6 +276,15 @@ export default function App() {
             {isDebating && (
               <span className="text-xs text-purple-400">🧠 Agents deliberating...</span>
             )}
+            <button
+              onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+              className="btn-ghost px-2.5 py-1.5 text-slate-400 flex items-center gap-1.5"
+              aria-label="Toggle light or dark mode"
+              title="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+              <span className="text-[10px]">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+            </button>
           </div>
         </motion.header>
 
@@ -226,11 +303,12 @@ export default function App() {
                   isRunning={isRunning}
                   isPaused={isPaused}
                   day={simState.day}
+                  tickMs={tickMs}
+                  onTickSpeedChange={setTickMs}
                   onPlay={handlePlay}
                   onPause={handlePause}
                   onAdvance={handleAdvance}
                   onInjectCrisis={handleCrisis}
-                  onUserAdvisory={handleAdvisory}
                   onReset={handleReset}
                   isDebating={isDebating}
                 />
@@ -242,6 +320,7 @@ export default function App() {
                   agentMessages={agentMessages}
                   isDebating={isDebating}
                   userAdvisory={latestAdvisory}
+                  onUserAdvisory={handleAdvisory}
                 />
               </div>
 
@@ -258,6 +337,12 @@ export default function App() {
           {activeTab === 'decisions' && (
             <div className="max-w-4xl mx-auto h-full overflow-y-auto">
               <DecisionLog debates={debates} />
+            </div>
+          )}
+
+          {activeTab === 'report' && (
+            <div className="max-w-4xl mx-auto h-full overflow-y-auto">
+              <AfterActionReport report={report} />
             </div>
           )}
         </div>

@@ -30,7 +30,7 @@ When responding:
 - Respectfully but firmly push back if other agents suggest risky approaches
 - Be specific about which zones need intervention
 
-Keep responses to 3-4 sentences. Be direct and assertive.`,
+Keep responses to max 2 concise sentences (or 3 very short lines). Be direct and assertive.`,
   },
 
   economy: {
@@ -53,7 +53,7 @@ When responding:
 - Suggest ways to keep essential economic activity running
 - Push back on blanket lockdowns with cost-benefit analysis
 
-Keep responses to 3-4 sentences. Be analytical and measured.`,
+Keep responses to max 2 concise sentences (or 3 very short lines). Be analytical and measured.`,
   },
 
   safety: {
@@ -76,7 +76,7 @@ When responding:
 - Consider vulnerable populations (elderly, daily wage workers, migrants)
 - Propose communication strategies to maintain public trust
 
-Keep responses to 3-4 sentences. Be practical and grounded.`,
+Keep responses to max 2 concise sentences (or 3 very short lines). Be practical and grounded.`,
   },
 
   coordinator: {
@@ -90,27 +90,86 @@ Keep responses to 3-4 sentences. Be practical and grounded.`,
 
 YOUR ROLE: Weigh all perspectives and make an optimal, explainable decision.
 
-When responding, you MUST use this EXACT format:
+When responding, use this compact format:
 
 **DECISION:** [One clear action statement]
 
-**Reasoning Chain:**
-1. [Health consideration + weight you gave it]
-2. [Economic consideration + weight you gave it]  
-3. [Safety consideration + weight you gave it]
-4. [User advisory consideration, if any]
-
-**Trade-offs Accepted:**
-- Gaining: [what this decision achieves]
-- Sacrificing: [what this decision costs]
-
 **Confidence:** [0-100]%
 
-**Expected Outcome:** [What you predict will happen in the next 3-5 days]
+**Why:** [One short line combining health/economy/safety rationale]
 
-Be decisive. Don't hedge. Pick a clear action with full justification.`,
+**Expected Outcome:** [One short line for next 3-5 days]
+
+Be decisive. Don't hedge. Keep the whole response to 4 short lines max.`,
   },
 };
+
+function summarizeForMemory(text) {
+  if (!text) return '';
+  const clean = text.replace(/\s+/g, ' ').trim();
+  const sentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
+  return sentence.slice(0, 180);
+}
+
+function buildAgentMemoryContext(agentId, agentMemory = {}) {
+  const selfMemory = agentMemory[agentId] || [];
+  const allRecent = Object.entries(agentMemory)
+    .filter(([, entries]) => Array.isArray(entries) && entries.length > 0)
+    .map(([id, entries]) => {
+      const latest = entries[entries.length - 1];
+      return `${AGENTS[id]?.name || id}: Day ${latest.day} - ${latest.summary}`;
+    });
+
+  let context = '';
+  if (selfMemory.length > 0) {
+    context += `\n\nYOUR MEMORY (recent outcomes to learn from):\n`;
+    context += selfMemory.slice(-3).map(m => `- Day ${m.day}: ${m.summary}`).join('\n');
+  }
+
+  if (allRecent.length > 0) {
+    context += `\n\nCOUNCIL MEMORY SNAPSHOT:\n${allRecent.join('\n')}`;
+  }
+
+  return context;
+}
+
+function updateAgentMemory(agentMemory = {}, day, responses) {
+  const next = { ...agentMemory };
+  ['health', 'economy', 'safety', 'coordinator'].forEach((agentId) => {
+    const prev = Array.isArray(next[agentId]) ? [...next[agentId]] : [];
+    prev.push({
+      day,
+      summary: summarizeForMemory(responses[agentId]),
+    });
+    next[agentId] = prev.slice(-6);
+  });
+  return next;
+}
+
+function makeConciseResponse(agentId, text) {
+  if (!text) return text;
+  const compact = text.replace(/\n{3,}/g, '\n\n').trim();
+
+  if (agentId !== 'coordinator') {
+    const sentences = compact.split(/(?<=[.!?])\s+/).filter(Boolean);
+    return sentences.slice(0, 2).join(' ').slice(0, 320).trim();
+  }
+
+  const decisionMatch = compact.match(/\*\*DECISION:\*\*.*$/im);
+  const confidenceMatch = compact.match(/\*\*Confidence:\*\*.*$/im);
+  const whyMatch = compact.match(/\*\*Why:\*\*.*$/im);
+  const outcomeMatch = compact.match(/\*\*Expected Outcome:\*\*.*$/im);
+
+  const lines = [
+    decisionMatch?.[0],
+    confidenceMatch?.[0],
+    whyMatch?.[0],
+    outcomeMatch?.[0],
+  ].filter(Boolean);
+
+  if (lines.length > 0) return lines.join('\n');
+  return compact.split('\n').filter(Boolean).slice(0, 4).join('\n');
+}
 
 // ─── Build Situation Report ───────────────────────────────
 export function buildSituationReport(stats, zones, day, recentDecisions = []) {
@@ -199,7 +258,7 @@ function getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisor
 }
 
 // ─── Single Agent Response ────────────────────────────────
-async function getAgentResponse(agentId, situationReport, otherAgentInputs = '', userAdvisory = '') {
+async function getAgentResponse(agentId, situationReport, otherAgentInputs = '', userAdvisory = '', agentMemory = {}) {
   const agent = AGENTS[agentId];
 
   let prompt = `CURRENT SITUATION:\n${situationReport}`;
@@ -212,6 +271,7 @@ async function getAgentResponse(agentId, situationReport, otherAgentInputs = '',
     prompt += `\n\n🗣️ CITIZEN/EXTERNAL ADVISORY: "${userAdvisory}"\nYou must acknowledge and respond to this advisory in your analysis.`;
   }
 
+  prompt += buildAgentMemoryContext(agentId, agentMemory);
   prompt += `\n\nGiven the above situation, what is your recommendation? Remember your role: ${agent.role}. Your priority: ${agent.priority}.`;
 
   try {
@@ -227,41 +287,48 @@ async function getAgentResponse(agentId, situationReport, otherAgentInputs = '',
 
     if (!response.ok) throw new Error('API error');
     const data = await response.json();
-    return data.response;
+    return makeConciseResponse(agentId, data.response);
   } catch (err) {
     // Intelligent fallback — works without backend
     await new Promise(r => setTimeout(r, 800 + Math.random() * 1200)); // simulate thinking delay
-    return getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisory);
+    return makeConciseResponse(agentId, getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisory));
   }
 }
 
 // ─── Run Full Agent Debate ────────────────────────────────
-export async function runAgentDebate(stats, zones, day, recentDecisions = [], userAdvisory = '', onAgentSpeak = null) {
+export async function runAgentDebate(stats, zones, day, recentDecisions = [], userAdvisory = '', onAgentSpeak = null, agentMemory = {}) {
   const situationReport = buildSituationReport(stats, zones, day, recentDecisions);
 
   // Step 1: Health Director speaks first
   if (onAgentSpeak) onAgentSpeak('health', 'thinking');
-  const healthResponse = await getAgentResponse('health', situationReport, '', userAdvisory);
+  const healthResponse = await getAgentResponse('health', situationReport, '', userAdvisory, agentMemory);
   if (onAgentSpeak) onAgentSpeak('health', healthResponse);
 
   // Step 2: Economic Advisor responds (seeing Health's position)
   if (onAgentSpeak) onAgentSpeak('economy', 'thinking');
   const economyResponse = await getAgentResponse('economy', situationReport,
-    `Health Director says: "${healthResponse}"`, userAdvisory);
+    `Health Director says: "${healthResponse}"`, userAdvisory, agentMemory);
   if (onAgentSpeak) onAgentSpeak('economy', economyResponse);
 
   // Step 3: Safety Chief responds (seeing both)
   if (onAgentSpeak) onAgentSpeak('safety', 'thinking');
   const safetyResponse = await getAgentResponse('safety', situationReport,
-    `Health Director says: "${healthResponse}"\nEconomic Advisor says: "${economyResponse}"`, userAdvisory);
+    `Health Director says: "${healthResponse}"\nEconomic Advisor says: "${economyResponse}"`, userAdvisory, agentMemory);
   if (onAgentSpeak) onAgentSpeak('safety', safetyResponse);
 
   // Step 4: Coordinator makes final decision (seeing all three)
   if (onAgentSpeak) onAgentSpeak('coordinator', 'thinking');
   const coordinatorResponse = await getAgentResponse('coordinator', situationReport,
     `Health Director: "${healthResponse}"\nEconomic Advisor: "${economyResponse}"\nPublic Safety: "${safetyResponse}"`,
-    userAdvisory);
+    userAdvisory, agentMemory);
   if (onAgentSpeak) onAgentSpeak('coordinator', coordinatorResponse);
+
+  const updatedMemory = updateAgentMemory(agentMemory, day, {
+    health: healthResponse,
+    economy: economyResponse,
+    safety: safetyResponse,
+    coordinator: coordinatorResponse,
+  });
 
   return {
     health: healthResponse,
@@ -271,6 +338,7 @@ export async function runAgentDebate(stats, zones, day, recentDecisions = [], us
     situationReport,
     day,
     userAdvisory: userAdvisory || null,
+    updatedMemory,
   };
 }
 

@@ -35,6 +35,7 @@ export default function App() {
   const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [actionToast, setActionToast] = useState(null);
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState('');
   const [darkMode, setDarkMode] = useState(true);
@@ -73,7 +74,9 @@ export default function App() {
     }
     // Save current messages as "previous" before clearing
     setIsDebating(true); setIsPaused(true);
-    setPreviousMessages(prev => agentMessages.length > 0 ? agentMessages : prev);
+    if (agentMessages.length > 0) setPreviousMessages(agentMessages);
+    // Defer clear to next tick so React batches with the "previous" save
+    await new Promise(r => setTimeout(r, 50));
     setAgentMessages([]); setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
     const abortController = new AbortController();
@@ -648,9 +651,28 @@ export default function App() {
                 onClose={() => setSelectedZone(null)}
                 onAction={(action) => {
                   setSimState(prev => applyDecision(prev, action));
-                  setSelectedZone(null);
+                  setActionToast(action.summary || action.action);
+                  setTimeout(() => { setActionToast(null); setSelectedZone(null); }, 1200);
                 }}
               />
+            )}
+          </AnimatePresence>
+
+          {/* ── ACTION TOAST ── */}
+          <AnimatePresence>
+            {actionToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 border"
+                style={{ background: 'var(--t-bg)', borderColor: '#10b981', boxShadow: '0 0 20px rgba(16,185,129,0.2)' }}
+              >
+                <span className="text-xs font-mono font-bold text-green-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  ✓ {actionToast}
+                </span>
+              </motion.div>
             )}
           </AnimatePresence>
         </main>

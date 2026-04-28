@@ -2,7 +2,7 @@
  * SimulCrisis — Gemini AI Service (New SDK)
  * ==========================================
  * Uses @google/genai (current SDK, replaces deprecated @google/generative-ai)
- * Model: gemini-3.1-pro (flagship — complex reasoning + agentic workflows)
+ * Model: gemini-2.5-pro (top-tier flagship — 1M context, thinking, complex reasoning)
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -30,7 +30,7 @@ export async function generateAgentResponseStreaming(systemPrompt, userPrompt, o
   if (!ai) throw new Error('Gemini not configured');
 
   const response = await ai.models.generateContentStream({
-    model: 'gemini-3.1-pro',
+    model: 'gemini-2.5-pro',
     contents: userPrompt,
     config: {
       systemInstruction: systemPrompt,
@@ -59,7 +59,7 @@ export async function generateAgentResponse(systemPrompt, userPrompt) {
   if (!ai) throw new Error('Gemini not configured');
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-pro',
+    model: 'gemini-2.5-pro',
     contents: userPrompt,
     config: {
       systemInstruction: systemPrompt,

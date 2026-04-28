@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { Brain } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 
@@ -12,13 +13,27 @@ function DotsLoader({ color }) {
   );
 }
 
+/**
+ * AgentMessage — slides in on first render only.
+ * Uses a ref to track if it's already been shown,
+ * so tab switching doesn't replay the animation.
+ */
 function AgentMessage({ agentId, message }) {
   const agent = AGENTS[agentId];
   if (!message) return null;
   const isThinking = message.text === 'thinking';
+  const hasAnimated = useRef(false);
+  const elRef = useRef(null);
+
+  useEffect(() => {
+    if (!hasAnimated.current && elRef.current) {
+      hasAnimated.current = true;
+      elRef.current.classList.add('agent-msg-enter');
+    }
+  }, []);
 
   return (
-    <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border-light)' }}>
+    <div ref={elRef} className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border-light)' }}>
       <div className="flex items-center gap-3 mb-2">
         <div className="w-8 h-8 border flex items-center justify-center text-lg"
           style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>

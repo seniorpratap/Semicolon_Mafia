@@ -94,9 +94,9 @@ body.light {
 .grid-cell { border: 1px solid var(--t-border); background: var(--t-bg); transition: all 0.15s; }
 .grid-cell:hover { box-shadow: inset 0 0 0 1px var(--t-text); }
 .grid-cell-clr { background: var(--t-bg); }
-.grid-cell-low { background: rgba(16,185,129,0.08); }
-.grid-cell-med { background: rgba(245,158,11,0.1); }
-.grid-cell-hi { background: rgba(239,68,68,0.12); }
+.grid-cell-low { background: rgba(16,185,129,0.20); }
+.grid-cell-med { background: rgba(245,158,11,0.22); }
+.grid-cell-hi { background: rgba(239,68,68,0.28); }
 body.light .grid-cell-low { background: rgba(16,185,129,0.25); }
 body.light .grid-cell-med { background: rgba(255,107,53,0.25); }
 body.light .grid-cell-hi { background: rgba(239,68,68,0.30); }
@@ -138,3 +138,12 @@ body.light .grid-cell-hi { background: rgba(239,68,68,0.30); }
 .resize-handle:hover { background: rgba(139,92,246,0.05); }
 body.light .resize-handle:hover { background: rgba(255,107,53,0.05); }
 body.light .resize-handle:hover::before { background: #FF6B35; }
+
+/* ── Agent Message Enter Animation ─── */
+.agent-msg-enter {
+  animation: agentSlideIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes agentSlideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}

@@ -42,6 +42,7 @@ export default function App() {
   const intervalRef = useRef(null);
   const demoRef = useRef(false);
   const demoAbortRef = useRef(null);
+  const debateAbortRef = useRef(null);
 
   const cs = getStats(simState);
 
@@ -61,25 +62,41 @@ export default function App() {
   }, [isRunning, isPaused, isDebating, tick]);
 
   const triggerDebate = useCallback(async (adv = '') => {
+    // Guard: don't start a parallel debate
+    if (debateAbortRef.current) {
+      // If advisory given while debating, store it for next time
+      if (adv) setLatestAdvisory(adv);
+      return;
+    }
     setIsDebating(true); setIsPaused(true); setAgentMessages([]); setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
-    const s = getStats(simState);
-    const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
-    const msgs = [];
-    const debate = await runAgentDebate(s, simState.zones, simState.day, rd, adv || latestAdvisory,
-      (id, text) => {
-        // Upsert: update existing agent entry or add new one
-        const idx = msgs.findIndex(m => m.agentId === id);
-        if (idx >= 0) { msgs[idx] = { agentId: id, text }; }
-        else { msgs.push({ agentId: id, text }); }
-        setAgentMessages([...msgs]);
-      }
-    );
-    const actions = parseDecisionAction(debate.coordinator, simState.zones);
-    let ns = simState;
-    actions.forEach(a => { ns = applyDecision(ns, a); });
-    setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setLatestAdvisory('');
-    setExecutedActions(actions);
+    const abortController = new AbortController();
+    debateAbortRef.current = abortController;
+    try {
+      const s = getStats(simState);
+      const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
+      const msgs = [];
+      const debate = await runAgentDebate(s, simState.zones, simState.day, rd, adv || latestAdvisory,
+        (id, text) => {
+          if (abortController.signal.aborted) return;
+          const idx = msgs.findIndex(m => m.agentId === id);
+          if (idx >= 0) { msgs[idx] = { agentId: id, text }; }
+          else { msgs.push({ agentId: id, text }); }
+          setAgentMessages([...msgs]);
+        }
+      );
+      if (abortController.signal.aborted) return;
+      const actions = parseDecisionAction(debate.coordinator, simState.zones);
+      let ns = simState;
+      actions.forEach(a => { ns = applyDecision(ns, a); });
+      setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setLatestAdvisory('');
+      setExecutedActions(actions);
+    } catch (err) {
+      if (!abortController.signal.aborted) console.error('[Debate]', err);
+      setIsDebating(false);
+    } finally {
+      debateAbortRef.current = null;
+    }
   }, [simState, debates, latestAdvisory]);
 
   const handleAdvance = useCallback(async () => {
@@ -90,7 +107,14 @@ export default function App() {
   const play = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
   const pause = () => setIsPaused(true);
   const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 4000); setTimeout(() => triggerDebate(), 500); };
-  const advisory = (t) => { setIsPaused(true); triggerDebate(t); };
+  const advisory = (t) => {
+    if (isDebating) {
+      // Store advisory for display, will be used in next debate
+      setLatestAdvisory(t);
+      return;
+    }
+    setIsPaused(true); triggerDebate(t);
+  };
   const reset = () => { stopDemo(); clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
 
   // ─── Demo Mode ───────────────────────────────────────────
@@ -104,6 +128,11 @@ export default function App() {
     demoRef.current = false;
     setDemoMode(false);
     setDemoStep('');
+    setIsDebating(false);
+    setIsPaused(false);
+    // Cancel any in-flight debate
+    if (debateAbortRef.current) { debateAbortRef.current.abort(); debateAbortRef.current = null; }
+    // Cancel any sleep timer
     if (demoAbortRef.current) { demoAbortRef.current(); demoAbortRef.current = null; }
   }, []);
 

@@ -1,123 +1,103 @@
-# 🧠 SimulCrisis — Multi-Agent Crisis Decision Simulator
+# SimulCrisis — Multi-Agent Crisis Decision Simulator
 
-> **Theme:** Intelligent Systems for Real-World Decision Making  
-> **Event:** TechFusion 2.0 | Dayananda Sagar Academy of Technology & Management
+> **AI agents debate. You decide. Cities survive.**
 
-## What is SimulCrisis?
-
-SimulCrisis is a **real-time crisis simulation platform** where a disease outbreak spreads across a virtual city, and **4 AI agents** with conflicting priorities debate the best course of action — live on screen.
-
-### The 3 Things That Make This Different:
-1. **Visible Intelligence** — Watch AI agents argue, reason, and make decisions in real-time
-2. **Interactive** — Users can inject crises, give suggestions, and watch all agents adapt
-3. **Explainable AI** — Every decision shows a full reasoning chain (why THIS and not THAT)
+SimulCrisis is a real-time tactical crisis management dashboard where 4 AI agents—powered by Google Gemini 2.5 Flash—analyze an unfolding pandemic simulation, debate response strategies with conflicting priorities, and produce actionable decisions. The human operator (you) can inject crises, override decisions, and guide the AI council through advisories.
 
 ---
 
-## 🖥️ Features
+## 🎯 What It Does
 
-### 🗺️ Real-Time City Simulation
-- 36-zone city grid with SIR disease spread model
-- Zones change color as infection spreads (green → yellow → orange → red)
-- Hospital capacity tracking, economy index, public morale
-- Cross-zone transmission and containment mechanics
+| Layer | Description |
+|-------|-------------|
+| **Simulation** | SIR epidemiological model across 36 city zones with cross-zone spread, hospital overflow, dynamic economy & morale |
+| **AI Council** | 4 specialized agents (Health, Economy, Safety, Coordinator) conduct sequential debates with data-driven reasoning |
+| **Human-in-the-Loop** | Operator can submit advisories that agents MUST address, inject crisis events, and take direct zone actions |
+| **Decision Engine** | Coordinator synthesizes debates into executable actions (lockdowns, vaccinations, hospital expansion) that modify simulation state |
 
-### 🧠 4 AI Agents with Conflicting Priorities
-| Agent | Role | Priority |
-|-------|------|----------|
-| 🏥 Dr. Meera Sharma | Health Director | Save lives at all costs |
-| 💰 Arjun Patel | Economic Advisor | Protect livelihoods |
-| 👮 Inspector Kavya Reddy | Public Safety Chief | Maintain order |
-| 🎯 Commissioner Vikram Das | Coordinator | Balance all & decide |
-
-Each agent **sees the other agents' positions** and responds to them — creating a realistic multi-agent debate.
-
-### ⚡ Interactive Crisis Injection
-- Virus Mutation (R0 increase)
-- Hospital Fire (capacity loss)
-- Medical Supply Shortage
-- Unauthorized Mass Gathering
-- Emergency Vaccine Shipment
-
-### 💬 User Advisory System
-Type any suggestion → all 4 agents evaluate it from their perspective → the coordinator incorporates it into the final decision with explicit reasoning.
-
-### 📊 Live Intelligence Dashboard
-- Infection curve (area chart)
-- Economy & morale stability index
-- Hospital load tracking
-- Animated counters and gauge bars
-
-### 📋 Explainable Decision Log
-- Full debate history with expandable entries
-- Each decision shows: reasoning chain, trade-offs, confidence score, expected outcome
-- User advisories tracked as decision inputs
-
----
-
-## 🏗️ Architecture
+## 🏗 Architecture
 
 ```
-Frontend (React + Vite)
-├── Simulation Engine (SIR model, city grid, JS)
-├── Agent Orchestrator (debate chain, prompt builder)
-├── UI Components (CityGrid, AgentPanel, Stats, Controls)
-└── Mock Fallback (works without backend)
-
-Backend (FastAPI + Python)
-├── /api/agent-respond → Gemini API proxy
-└── CORS configured for frontend
+┌──────────────────────────────────────────────────────────┐
+│                    SimulCrisis Dashboard                  │
+├──────────┬────────────────────────┬──────────────────────┤
+│ City Grid│    Agent Council       │  Live Intelligence   │
+│ 6×6 zones│  4 AI agents debate    │  Metrics + Charts    │
+│ + Crisis │  + Advisory input      │  Economy + Morale    │
+│ Controls │  + Action execution    │  Infection Curve     │
+├──────────┴────────────────────────┴──────────────────────┤
+│                  SIR Simulation Engine                    │
+│          36 zones · cross-spread · hospital overflow      │
+├──────────────────────────────────────────────────────────┤
+│              Google Gemini 2.5 Flash API                  │
+│         4 agents · streaming · data-driven prompts        │
+└──────────────────────────────────────────────────────────┘
 ```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React, Vite, Tailwind CSS v4 |
-| Animations | Framer Motion |
-| Charts | Recharts |
-| Icons | Lucide React |
-| Backend | FastAPI, Python |
-| AI | Google Gemini 2.0 Flash |
-
----
 
 ## 🚀 Quick Start
 
-### Frontend
 ```bash
-cd frontend
+# Clone
+git clone https://github.com/seniorpratap/Semicolon_Mafia.git
+cd Semicolon_Mafia/frontend
+
+# Install
 npm install
+
+# Set up Gemini API key (optional — works with mock mode too)
+echo "VITE_GEMINI_API_KEY=your_key_here" > .env
+
+# Run
 npm run dev
-# → http://localhost:5173
 ```
 
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-# Add GEMINI_API_KEY to .env
-python main.py
-# → http://localhost:8000
-```
+Opens at `http://localhost:5173`
 
-> **Note:** The app works fully without the backend using intelligent mock responses. Backend adds real Gemini AI responses.
+## 🎮 Demo Flow (For Judges)
+
+1. **Launch** the simulation
+2. Click **Advance 5 Days + Council Debate** — watch agents analyze zone data and argue
+3. **Inject a crisis** (e.g., "Virus Mutation") — see agents react to the emergency
+4. **Type an advisory** (e.g., "Focus on vaccinating Zone 2") — agents must address it
+5. **Click any zone** in the grid — see detailed stats and take quick actions
+6. Click **GUIDELINES** tab — see response protocols for all 10 crisis scenarios
+7. Or just click **Demo Mode** and let it auto-run
+
+## 🧠 AI Agent System
+
+| Agent | Role | Priority |
+|-------|------|----------|
+| **Dr. Meera Sharma** | Health Director | Containment first, save lives at any cost |
+| **Arjun Patel** | Economic Advisor | Minimize lockdown damage, keep economy alive |
+| **Inspector Kavya Reddy** | Public Safety Chief | Law enforcement, morale, civil order |
+| **Coordinator Vikram Singh** | Crisis Coordinator | Weighs all 3 arguments, makes final decision |
+
+Agents receive **real-time zone-by-zone data** (infection rates, hospital occupancy, lockdown status, vaccination %) and must cite specific numbers in their arguments.
+
+## 📊 Simulation Features
+
+- **SIR Model**: Susceptible → Infected → Recovered/Deceased compartmental model
+- **36 City Zones**: Each with unique population, hospital capacity, economic value
+- **Cross-Zone Spread**: Infections spread to adjacent zones based on lockdown status
+- **10 Crisis Events**: Virus mutation, hospital fire, power outage, misinformation wave, etc.
+- **Dynamic Economy**: Drops from infections (workforce loss), lockdowns, and hospital overflow
+- **Dynamic Morale**: Decays from deaths, lockdown fatigue, and infection fear
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19 + Vite 8 |
+| Styling | Tailwind CSS v4 + CSS Variables |
+| Animations | Framer Motion |
+| Charts | Recharts |
+| AI | Google Gemini 2.5 Flash (`@google/genai`) |
+| Simulation | Custom SIR Engine (372 lines) |
+
+## 👥 Team — Semicolon Mafia
+
+Built for **TechFusion 2.0 Hackathon** — Intelligent Systems Track
 
 ---
 
-## 👥 Team
-
-| Role | Responsibility |
-|------|---------------|
-| Lead Dev | Simulation engine, AI agents, App orchestration |
-| Frontend Dev 1 | CityGrid, StatsPanel, charts |
-| Frontend Dev 2 | AgentPanel, ControlPanel, DecisionLog |
-| Backend + Deploy | FastAPI, Gemini API, deployment, pitch deck |
-
----
-
-## 📄 License
-
-Built for TechFusion 2.0 Hackathon.
+*SimulCrisis: Because in a real crisis, AI shouldn't replace human judgment — it should inform it.*

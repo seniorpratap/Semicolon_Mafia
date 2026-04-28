@@ -9,15 +9,15 @@
 export function createCity(gridSize = 6) {
   const zones = [];
   const zoneNames = [
-    'Central Hub', 'Tech Park', 'Old Town', 'Market District',
-    'Suburb North', 'Industrial Zone', 'University Area', 'Hospital District',
-    'Waterfront', 'Business Center', 'Residential East', 'Green Belt',
-    'Transport Hub', 'Suburb South', 'Commercial Strip', 'Heritage Zone',
-    'IT Corridor', 'Lakeside', 'Defense Colony', 'New Extension',
-    'Railway Area', 'Airport Zone', 'Sports Complex', 'Cultural Center',
-    'Food Street', 'Garden City', 'Electronics City', 'Auto Nagar',
-    'Pharma Hub', 'Education Park', 'Media Center', 'Finance District',
-    'Logistics Park', 'Textile Market', 'Agri Zone', 'Smart Block'
+    'Central', 'Tech', 'Old Town', 'Market',
+    'Suburb N', 'Industry', 'Univ', 'Hospital',
+    'Harbor', 'Biz Hub', 'East Res', 'Green',
+    'Transit', 'Suburb S', 'Mall', 'Heritage',
+    'IT Park', 'Lake', 'Defense', 'New Ext',
+    'Railway', 'Airport', 'Sports', 'Culture',
+    'Food St', 'Garden', 'Electro', 'Auto',
+    'Pharma', 'Edu', 'Media', 'Finance',
+    'Logist', 'Textile', 'Agri', 'Smart'
   ];
 
   for (let i = 0; i < gridSize * gridSize; i++) {

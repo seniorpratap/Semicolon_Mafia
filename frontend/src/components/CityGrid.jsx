@@ -79,8 +79,8 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
                 ${selectedZone?.id === zone.id ? 'ring-1 ring-primary/50' : ''}
               `}
             >
-              <span className="text-[6.5px] font-mono font-medium text-white/50 leading-none truncate w-full text-center px-0.5">
-                {zone.name.length > 7 ? zone.name.split(' ')[0].slice(0, 7) : zone.name}
+              <span className="text-[7px] font-mono font-medium text-white/60 leading-none truncate w-full text-center px-0.5">
+                {zone.name}
               </span>
               {zone.infected > 0 && (
                 <span className="text-[7px] font-mono font-bold text-white/70">

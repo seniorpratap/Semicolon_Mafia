@@ -48,6 +48,9 @@ body.light {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--t-border); border-radius: 0; }

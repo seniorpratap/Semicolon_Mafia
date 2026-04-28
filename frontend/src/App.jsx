@@ -8,6 +8,7 @@ import AgentPanel from './components/AgentPanel';
 import DecisionLog from './components/DecisionLog';
 import ZoneDetail from './components/ZoneDetail';
 import ResizeHandle from './components/ResizeHandle';
+import CrisisGuidelines from './components/CrisisGuidelines';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
@@ -270,47 +271,8 @@ export default function App() {
           </div>
 
           {/* Tabs */}
-          {['DASHBOARD', 'DECISION LOG'].map(tab => {
-            const id = tab === 'DASHBOARD' ? 'dashboard' : 'decisions';
-            const active = activeTab === id;
-            return (
-              <button key={id} onClick={() => setActiveTab(id)}
-                className="relative pb-1 text-xs font-mono font-bold uppercase tracking-[0.12em] transition-colors"
-                style={{ color: active ? 'var(--t-text)' : 'var(--t-muted)', borderBottom: active ? '2px solid var(--t-text)' : '2px solid transparent' }}>
-                {tab}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-4">
-          {/* Dark/Light toggle */}
-          <button onClick={() => setDarkMode(!darkMode)}
-            className="w-8 h-8 border flex items-center justify-center transition-colors hover:bg-white/10"
-            style={{ borderColor: 'var(--t-border)' }}>
-            {darkMode ? <Sun size={14} style={{ color: '#f59e0b' }} /> : <Moon size={14} style={{ color: '#6366f1' }} />}
-          </button>
-          <div className="text-right">
-            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: 'var(--t-muted)' }}>Day</div>
-            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: 'var(--t-text)' }}>{dayStr}</div>
-          </div>
-        </div>
-      </header>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6">
-          {/* Threat pill */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full border" style={{ borderColor: threatColor }}>
-            <div style={{ color: threatColor }}>{threatIcon}</div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: threatColor }}>
-              Threat · {threat}
-            </span>
-          </div>
-
-          {/* Tabs */}
-          {['DASHBOARD', 'DECISION LOG'].map(tab => {
-            const id = tab === 'DASHBOARD' ? 'dashboard' : 'decisions';
+          {['DASHBOARD', 'DECISION LOG', 'GUIDELINES'].map(tab => {
+            const id = tab === 'DASHBOARD' ? 'dashboard' : tab === 'DECISION LOG' ? 'decisions' : 'guidelines';
             const active = activeTab === id;
             return (
               <button key={id} onClick={() => setActiveTab(id)}
@@ -345,7 +307,13 @@ export default function App() {
             <AlertTriangle size={16} className="text-red-500" />
             <div>
               <div className="text-[9px] font-mono font-bold uppercase tracking-[0.15em] text-red-500">Crisis Injected</div>
-              <div className="text-sm font-bold" style={{ color: '      {/* ═══ MAIN CONTENT ═══ */}
+              <div className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{crisisAlert}</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ MAIN CONTENT ═══ */}
       {activeTab === 'dashboard' ? (
         <main className="flex-1 min-h-0 flex relative">
 
@@ -580,9 +548,13 @@ export default function App() {
           </div>
           </>)}
         </main>
-      ) : (
+      ) : activeTab === 'decisions' ? (
         <main className="flex-1 overflow-hidden p-6">
           <DecisionLog debates={debates} />
+        </main>
+      ) : (
+        <main className="flex-1 overflow-hidden bg-panel">
+          <CrisisGuidelines />
         </main>
       )}
 
@@ -600,70 +572,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-    </div>
-  );
-}ata={history.slice(-50)} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                      <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2, fill: '#f59e0b' }} />
-                      <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={1.5} dot={{ r: 2, fill: '#8b5cf6' }} />
-                      <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
-                      <Tooltip content={<TacTooltip />} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: '#3a3a3a' }}>Awaiting data</div>
-                )}
-              </div>
-            </div>
-
-            {/* Zone Summary */}
-            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: 'var(--t-border)' }}>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Zones affected: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.activeZones}/36</span></span>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Under lockdown: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.lockdownZones}</span></span>
-            </div>
-          </div>
-          </>)}
-
-          {/* ── ZONE DETAIL OVERLAY ── */}
-          <AnimatePresence>
-            {selectedZone && (
-              <ZoneDetail
-                zone={simState.zones.find(z => z.id === selectedZone.id) || selectedZone}
-                onClose={() => setSelectedZone(null)}
-                onAction={(action) => {
-                  setSimState(prev => applyDecision(prev, action));
-                  setSelectedZone(null);
-                }}
-              />
-            )}
-          </AnimatePresence>
-        </main>
-      ) : (
-        <main className="flex-1 min-h-0 overflow-y-auto scroll-y p-6">
-          <DecisionLog debates={debates} />
-        </main>
-      )}
-
-      {/* ═══ FOOTER ═══ */}
-      <footer className="h-[32px] flex-shrink-0 flex items-center justify-between px-5 border-t text-[9px] font-mono uppercase tracking-[0.15em]"
-        style={{ borderColor: 'var(--t-border)', color: 'var(--t-dim)' }}>
-        <span>SIR Model v2.0 · Grid: 6×6 (36 Zones) · Pop: 1,200,000</span>
-        <span>Agents: 4 Active · Decisions: {debates.length} · TechFusion 2.0 — Intelligent Systems</span>
-      </footer>
-    </div>
-  );
-}
-
-
-
-
-
-function TacTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border px-3 py-2 text-[10px] font-mono shadow-xl rounded-lg" style={{ background: 'var(--t-panel)', borderColor: 'var(--t-border)' }}>
-      {payload.map((p, i) => (
-        <div key={i} className="font-bold" style={{ color: p.color }}>{p.dataKey}: {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</div>
-      ))}
     </div>
   );
 }

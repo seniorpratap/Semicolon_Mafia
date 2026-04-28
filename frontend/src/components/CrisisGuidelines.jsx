@@ -1,12 +1,14 @@
 import { ShieldAlert, Wind, Flame, CloudRain, Sun, Activity, Mountain, Waves, FlaskConical, Bug } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const base = import.meta.env.BASE_URL || '/';
+
 const guidelines = [
   {
     id: 'cyclone',
     title: 'Cyclone',
     icon: <Wind size={16} className="text-blue-400" />,
-    image: '/images/guidelines/cyclone.png',
+    image: 'images/guidelines/cyclone.png',
     dos: [
       "Check the house; secure loose tiles and carry out repairs of doors and windows.",
       "Keep some wooden boards ready so that glass windows can be boarded if needed.",
@@ -20,7 +22,7 @@ const guidelines = [
     id: 'forest_fire',
     title: 'Forest Fire',
     icon: <Flame size={16} className="text-orange-500" />,
-    image: '/images/guidelines/forest_fire.png',
+    image: 'images/guidelines/forest_fire.png',
     dos: [
       "Keep emergency contact numbers of district fire service department and local forest authorities handy.",
       "Immediately inform them in case of an unattended or out-of-control fire."
@@ -34,7 +36,7 @@ const guidelines = [
     id: 'floods',
     title: 'Rainy Season (Floods)',
     icon: <CloudRain size={16} className="text-blue-500" />,
-    image: '/images/guidelines/floods.png',
+    image: 'images/guidelines/floods.png',
     dos: [
       "Listen to radio, watch TV, read newspapers for weather updates.",
       "Stay away from electric poles and fallen power lines to avoid electrocution."
@@ -48,7 +50,7 @@ const guidelines = [
     id: 'heat_wave',
     title: 'Summer (Heat Wave)',
     icon: <Sun size={16} className="text-yellow-500" />,
-    image: '/images/guidelines/heat_wave.png',
+    image: 'images/guidelines/heat_wave.png',
     dos: [
       "Wear lightweight, light-coloured, loose, cotton clothes.",
       "Get trained in first aid.",
@@ -63,7 +65,7 @@ const guidelines = [
     id: 'earthquake',
     title: 'Earthquake',
     icon: <Activity size={16} className="text-red-400" />,
-    image: '/images/guidelines/earthquake.png',
+    image: 'images/guidelines/earthquake.png',
     dos: [
       "Consult a structural engineer to make your house resilient. Fasten shelves securely.",
       "During a quake: Drop, Cover, and Hold.",
@@ -78,7 +80,7 @@ const guidelines = [
     id: 'landslide',
     title: 'Landslide',
     icon: <Mountain size={16} className="text-stone-500" />,
-    image: '/images/guidelines/landslide.png',
+    image: 'images/guidelines/landslide.png',
     dos: [
       "Grow trees to bind soil. Keep drains clean.",
       "Watch for warning signs like muddy river water or new cracks in rocks.",
@@ -92,7 +94,7 @@ const guidelines = [
     id: 'tsunami',
     title: 'Tsunami',
     icon: <Waves size={16} className="text-blue-600" />,
-    image: '/images/guidelines/tsunami.png',
+    image: 'images/guidelines/tsunami.png',
     dos: [
       "Know your evacuation routes to high ground.",
       "If you see sea water receding rapidly, immediately move to higher ground.",
@@ -106,7 +108,7 @@ const guidelines = [
     id: 'chemical',
     title: 'Chemical Disaster',
     icon: <FlaskConical size={16} className="text-green-500" />,
-    image: '/images/guidelines/chemical.png',
+    image: 'images/guidelines/chemical.png',
     dos: [
       "Evacuate perpendicular to the wind direction.",
       "Cover your face with a wet mask.",
@@ -120,7 +122,7 @@ const guidelines = [
     id: 'biological',
     title: 'Biological Disaster',
     icon: <Bug size={16} className="text-purple-500" />,
-    image: '/images/guidelines/biological.png',
+    image: 'images/guidelines/biological.png',
     dos: [
       "Follow official health authority updates.",
       "Practice strict hygiene and social distancing.",
@@ -160,7 +162,7 @@ export default function CrisisGuidelines() {
             >
               <div className="h-48 overflow-hidden relative border-b" style={{ borderColor: 'var(--t-border)' }}>
                 <img 
-                  src={g.image} 
+                  src={`${base}${g.image}`} 
                   alt={g.title} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 />

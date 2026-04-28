@@ -8,6 +8,8 @@
 // ─── City Zone Generator ─────────────────────────────────
 export function createCity(gridSize = 6) {
   const zones = [];
+  const cityCenter = { lat: 28.6139, lng: 77.2090 };
+  const spacing = 0.02;
   const zoneNames = [
     'Central Hub', 'Tech Park', 'Old Town', 'Market District',
     'Suburb North', 'Industrial Zone', 'University Area', 'Hospital District',
@@ -30,6 +32,8 @@ export function createCity(gridSize = 6) {
       name: zoneNames[i] || `Zone ${i + 1}`,
       row: Math.floor(i / gridSize),
       col: i % gridSize,
+      lat: cityCenter.lat + (Math.floor(i / gridSize) - (gridSize - 1) / 2) * spacing,
+      lng: cityCenter.lng + (i % gridSize - (gridSize - 1) / 2) * spacing,
       population: isDense ? 50000 : (15000 + Math.floor(Math.random() * 35000)),
       susceptible: 0,   // set during init
       infected: 0,

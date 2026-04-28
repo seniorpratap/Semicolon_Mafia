@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon } from 'lucide-react';
+import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 import CityGrid from './components/CityGrid';
@@ -36,6 +36,8 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [leftW, setLeftW] = useState(380);
   const [rightW, setRightW] = useState(360);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const intervalRef = useRef(null);
   const demoRef = useRef(false);
   const demoAbortRef = useRef(null);
@@ -310,6 +312,14 @@ export default function App() {
         <main className="flex-1 min-h-0 flex relative">
 
           {/* ── LEFT COLUMN ── */}
+          {leftCollapsed ? (
+            <div className="flex-shrink-0 flex flex-col items-center border-r cursor-pointer hover:bg-white/5 transition-colors"
+              style={{ width: '36px', borderColor: 'var(--t-border)' }}
+              onClick={() => setLeftCollapsed(false)}>
+              <div className="py-3"><PanelRightOpen size={14} style={{ color: 'var(--t-muted)' }} /></div>
+              <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--t-muted)', writingMode: 'vertical-rl' }}>City Grid</span>
+            </div>
+          ) : (<>
           <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: `${leftW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
             {/* City Grid */}
             <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
@@ -318,6 +328,9 @@ export default function App() {
             <div className="flex-1 border-t" style={{ borderColor: '#2a2a2a' }}>
               <div className="tac-panel-header">
                 <span>Command Center</span>
+                <button onClick={() => setLeftCollapsed(true)} className="p-0.5 hover:bg-white/10 transition-colors" title="Collapse panel">
+                  <PanelLeftClose size={12} style={{ color: 'var(--t-muted)' }} />
+                </button>
               </div>
 
               <div className="px-4 py-3 space-y-3">
@@ -391,8 +404,10 @@ export default function App() {
               </div>
             </div>
           </div>
+          </>)}
 
           {/* ── LEFT RESIZE HANDLE ── */}
+          {!leftCollapsed && (
           <div className="resize-handle" onMouseDown={e => {
             e.preventDefault();
             const startX = e.clientX;
@@ -404,6 +419,7 @@ export default function App() {
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
           }} />
+          )}
 
           {/* ── CENTER: Agent Council ── */}
           <div className="flex-1 flex flex-col min-h-0">
@@ -421,6 +437,7 @@ export default function App() {
           </div>
 
           {/* ── RIGHT RESIZE HANDLE ── */}
+          {!rightCollapsed && (
           <div className="resize-handle" onMouseDown={e => {
             e.preventDefault();
             const startX = e.clientX;
@@ -432,14 +449,28 @@ export default function App() {
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
           }} />
+          )}
 
           {/* ── RIGHT: Live Intelligence ── */}
+          {rightCollapsed ? (
+            <div className="flex-shrink-0 flex flex-col items-center border-l cursor-pointer hover:bg-white/5 transition-colors"
+              style={{ width: '36px', borderColor: 'var(--t-border)' }}
+              onClick={() => setRightCollapsed(false)}>
+              <div className="py-3"><PanelLeftOpen size={14} style={{ color: 'var(--t-muted)' }} /></div>
+              <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--t-muted)', writingMode: 'vertical-rl' }}>Intelligence</span>
+            </div>
+          ) : (<>
           <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: `${rightW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
             <div className="tac-panel-header">
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Live Intelligence
               </span>
-              <Activity size={14} style={{ color: '#6b7280' }} />
+              <div className="flex items-center gap-2">
+                <Activity size={14} style={{ color: 'var(--t-muted)' }} />
+                <button onClick={() => setRightCollapsed(true)} className="p-0.5 hover:bg-white/10 transition-colors" title="Collapse panel">
+                  <PanelRightClose size={12} style={{ color: 'var(--t-muted)' }} />
+                </button>
+              </div>
             </div>
 
             {/* Metric Boxes */}
@@ -516,6 +547,7 @@ export default function App() {
               <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Under lockdown: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.lockdownZones}</span></span>
             </div>
           </div>
+          </>)}
 
           {/* ── ZONE DETAIL OVERLAY ── */}
           <AnimatePresence>

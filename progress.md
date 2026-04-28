@@ -98,8 +98,89 @@ frontend/
 - 🟢 Deployed: Running on `localhost:5173`
 
 ### Next Steps (Checkpoint 3):
-- [ ] Decision Log UI polish with timeline visualization
-- [ ] Mobile responsive adjustments
-- [ ] Demo mode (auto-play scenario for judging)
-- [ ] Performance optimization for extended simulations
-- [ ] Final polish and edge case handling
+- [x] Demo mode (auto-play scenario for judging)
+- [x] Decision Log UI polish
+- [x] Light/Dark mode toggle
+- [x] Resizable columns
+
+---
+
+## Checkpoint 3 — 8:30 PM (Feature Complete & Polish)
+
+### What was completed since Checkpoint 2:
+
+#### 1. Direct Gemini 2.0 Flash Integration (Major)
+- ✅ **Client-side AI**: Frontend calls Gemini 2.0 Flash directly — no backend needed for demo
+- ✅ **Streaming responses**: Real-time typewriter effect as each agent "speaks"
+- ✅ **Intelligent fallback**: Auto-switches to high-quality mock responses if no API key
+- ✅ **AI status badge**: Header shows `GEMINI LIVE` (green) or `MOCK MODE` (amber)
+- ✅ **Service layer**: `services/gemini.js` wraps all AI communication
+
+#### 2. Demo Mode — Auto Pilot (Major)
+- ✅ **One-click demo**: Purple "Demo Mode — Auto Pilot" button for judges
+- ✅ **Automated cycle**: Starts sim → advances days → triggers debates → injects crises → loops 5 cycles
+- ✅ **Phase indicators**: Pulsing status shows current demo phase
+- ✅ **Safe abort**: Click "Stop Demo" anytime, cleanly cancels async loop
+- ✅ **Hands-free presentation**: Judges watch the full system work without clicking
+
+#### 3. Zone Detail Panel (Major)
+- ✅ **Click any grid cell** → full-screen overlay with zone intelligence
+- ✅ **Population breakdown bar**: Susceptible / Infected / Recovered / Deceased segments
+- ✅ **Hospital gauge**: Occupancy vs capacity with overload warning (⚠️ OVERLOADED 344%)
+- ✅ **Economy value + Vaccination rate** with progress bars
+- ✅ **Quick action buttons**: Lockdown / Vaccinate / Expand Hospital — applied immediately
+- ✅ **Frosted glass backdrop** with click-outside-to-close
+
+#### 4. Light/Dark Mode Toggle
+- ✅ **Sun/Moon toggle** in header
+- ✅ **Light mode palette**: Navy `#0B1F3A` text, Orange `#FF6B35` accent, Beige `#F5F0E8` background
+- ✅ **CSS variable system**: `--t-bg`, `--t-text`, `--t-border` auto-switch via `body.light`
+- ✅ **All components themed**: CityGrid, AgentPanel, DecisionLog, ZoneDetail — zero hardcoded colors
+- ✅ **High contrast**: No light gray text, all elements clearly readable
+- ✅ **Poppins font** added for headings
+
+#### 5. Resizable Columns
+- ✅ **Drag handles** between left/center and center/right columns
+- ✅ **Real-time resize** via mouse events (min 280px, max 500px)
+- ✅ **Purple accent** on hover in dark mode, orange in light mode
+
+#### 6. UI/UX Polish (5 Senior-Level Fixes)
+- ✅ **Advisory moved to center**: Below agent council for natural read → type flow
+- ✅ **Decision Log redesigned**: Tactical theme with `#0a0a0a` bg, border-left accents, monospace
+- ✅ **Dots loader**: Replaced flashing spinner with smooth three-dot pulsing animation
+- ✅ **Message persistence**: Agent messages stay across tab switches (no re-animation)
+- ✅ **Duplicate fix**: Streaming upsert pattern — each agent shows exactly 1 entry
+
+### Updated Architecture:
+```
+frontend/
+├── src/
+│   ├── App.jsx                 # Main layout + state + demo mode (580 lines)
+│   ├── index.css               # CSS variable theme system (dark + light)
+│   ├── theme.js                # Theme token definitions
+│   ├── components/
+│   │   ├── CityGrid.jsx        # 6×6 interactive zone grid
+│   │   ├── AgentPanel.jsx      # Agent council + advisory input
+│   │   ├── ZoneDetail.jsx      # Zone drill-down overlay panel
+│   │   ├── DecisionLog.jsx     # Tactical decision history
+│   │   └── ResizeHandle.jsx    # Draggable column divider
+│   ├── engine/
+│   │   ├── simulation.js       # SIR model (302 lines)
+│   │   └── agents.js           # 4 AI agents + debate (339 lines)
+│   ├── services/
+│   │   └── gemini.js           # Gemini 2.0 Flash wrapper + streaming
+│   └── hooks/
+│       └── useEffects.js       # Typewriter + animated numbers
+├── .env.example                # API key template
+└── .env                        # VITE_GEMINI_API_KEY (local only)
+```
+
+### Current Status:
+- 🟢 **Frontend**: Feature-complete tactical UI with light/dark mode
+- 🟢 **Simulation**: SIR model with 36 zones, cross-zone spread, hospital overflow
+- 🟢 **AI Agents**: 4 agents with Gemini 2.0 Flash streaming + mock fallback
+- 🟢 **Demo Mode**: One-click auto-pilot for hackathon judges
+- 🟢 **Interactivity**: Zone detail panel, resizable columns, advisory system
+- 🟢 **Build**: Clean (0 errors)
+- 🟢 **Deployed**: Running on `localhost:5173`
+

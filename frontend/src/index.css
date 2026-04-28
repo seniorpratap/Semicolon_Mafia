@@ -24,7 +24,7 @@
 
 /* Light mode — Navy/Orange palette per design spec */
 body.light {
-  --t-bg: #F5F7FA;
+  --t-bg: #F5F0E8;
   --t-panel: #ffffff;
   --t-input: #ffffff;
   --t-hover: #EDF0F5;

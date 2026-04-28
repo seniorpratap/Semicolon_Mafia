@@ -242,16 +242,9 @@ export default function App() {
       </AnimatePresence>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <div className="flex-1 min-h-0 relative">
-        {/* Background effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-500/[0.03] rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-red-500/[0.03] rounded-full blur-[120px]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cyan-500/[0.02] rounded-full blur-[100px]" />
-        </div>
-
+      <div className="flex-1 min-h-0 relative bg-grid">
         {activeTab === 'sim' && (
-          <div className="h-full grid grid-cols-12 gap-3 p-3 relative z-10">
+          <div className="h-full grid grid-cols-12 gap-3 p-3">
             {/* LEFT: Map + Controls */}
             <div className="col-span-3 flex flex-col gap-3 overflow-y-auto scrollbar-thin">
               <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
@@ -276,7 +269,7 @@ export default function App() {
         )}
 
         {activeTab === 'decisions' && (
-          <div className="h-full p-3 relative z-10 overflow-y-auto">
+          <div className="h-full p-3 overflow-y-auto">
             <div className="max-w-5xl mx-auto">
               <DecisionLog debates={debates} />
             </div>

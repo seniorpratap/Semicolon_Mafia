@@ -6,6 +6,7 @@ import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, To
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
 import DecisionLog from './components/DecisionLog';
+import ZoneDetail from './components/ZoneDetail';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
@@ -267,7 +268,7 @@ export default function App() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       {activeTab === 'dashboard' ? (
-        <main className="flex-1 min-h-0 flex">
+        <main className="flex-1 min-h-0 flex relative">
 
           {/* ── LEFT COLUMN ── */}
           <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: '380px', borderColor: '#2a2a2a' }}>
@@ -475,6 +476,20 @@ export default function App() {
               <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>Under lockdown: <span className="text-white font-bold">{cs.lockdownZones}</span></span>
             </div>
           </div>
+
+          {/* ── ZONE DETAIL OVERLAY ── */}
+          <AnimatePresence>
+            {selectedZone && (
+              <ZoneDetail
+                zone={simState.zones.find(z => z.id === selectedZone.id) || selectedZone}
+                onClose={() => setSelectedZone(null)}
+                onAction={(action) => {
+                  setSimState(prev => applyDecision(prev, action));
+                  setSelectedZone(null);
+                }}
+              />
+            )}
+          </AnimatePresence>
         </main>
       ) : (
         <main className="flex-1 min-h-0 overflow-y-auto scroll-y p-6">

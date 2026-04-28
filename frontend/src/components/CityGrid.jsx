@@ -24,7 +24,7 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
         </span>
         <div className="flex gap-4 text-[10px] font-mono">
           <span>INF <span className="text-red-500 font-bold">{animInf.toLocaleString()}</span></span>
-          <span>DEC <span className="text-white font-bold">{animDec.toLocaleString()}</span></span>
+          <span>DEC <span className="font-bold" style={{ color: 'var(--t-text)' }}>{animDec.toLocaleString()}</span></span>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
             >
               {/* Zone Name + Icons */}
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-mono font-bold text-white/80 truncate leading-none">
+                <span className="text-[9px] font-mono font-bold truncate leading-none" style={{ color: 'var(--t-text)', opacity: 0.8 }}>
                   {zone.name.length > 8 ? zone.name.substring(0, 7) + '…' : zone.name}
                 </span>
                 {zone.lockdownLevel > 0 && (
@@ -54,7 +54,7 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
               </div>
 
               {/* Infected Count */}
-              <div className="text-[11px] font-mono font-bold text-white mt-0.5 leading-none">
+              <div className="text-[11px] font-mono font-bold mt-0.5 leading-none" style={{ color: 'var(--t-text)' }}>
                 {zone.infected > 0 ? zone.infected.toLocaleString() : '0'}
               </div>
             </button>
@@ -63,21 +63,21 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 border-t" style={{ borderColor: '#1a1a1a' }}>
+      <div className="flex items-center gap-4 px-4 py-2 border-t" style={{ borderColor: 'var(--t-border-light)' }}>
         {[
-          { l: 'CLR', c: '#0a0a0a', b: '#1a1a1a' },
-          { l: 'LOW', c: '#132a1c', b: '#1a3a24' },
-          { l: 'MED', c: '#2a2410', b: '#3a3418' },
-          { l: 'HI', c: '#2a1010', b: '#3a1818' },
+          { l: 'CLR', c: 'var(--t-bg)', b: 'var(--t-border)' },
+          { l: 'LOW', c: 'rgba(16,185,129,0.08)', b: 'rgba(16,185,129,0.2)' },
+          { l: 'MED', c: 'rgba(245,158,11,0.1)', b: 'rgba(245,158,11,0.2)' },
+          { l: 'HI', c: 'rgba(239,68,68,0.12)', b: 'rgba(239,68,68,0.2)' },
         ].map(({ l, c, b }) => (
           <div key={l} className="flex items-center gap-1.5">
             <div className="w-3 h-3 border" style={{ background: c, borderColor: b }} />
-            <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: '#6b7280' }}>{l}</span>
+            <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: 'var(--t-muted)' }}>{l}</span>
           </div>
         ))}
         <div className="flex items-center gap-1 ml-auto">
           <span className="text-[8px] opacity-50">🔒</span>
-          <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: '#6b7280' }}>LCK</span>
+          <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: 'var(--t-muted)' }}>LCK</span>
         </div>
       </div>
     </div>

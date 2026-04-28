@@ -7,6 +7,7 @@ import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
 import DecisionLog from './components/DecisionLog';
 import ZoneDetail from './components/ZoneDetail';
+import ResizeHandle from './components/ResizeHandle';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
@@ -33,6 +34,8 @@ export default function App() {
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState('');
   const [darkMode, setDarkMode] = useState(true);
+  const [leftW, setLeftW] = useState(380);
+  const [rightW, setRightW] = useState(360);
   const intervalRef = useRef(null);
   const demoRef = useRef(false);
   const demoAbortRef = useRef(null);
@@ -230,17 +233,17 @@ export default function App() {
   }, [darkMode]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: darkMode ? '#000' : '#f5f5f5' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
 
       {/* ═══ HEADER ═══ */}
-      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: '#2a2a2a' }}>
+      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: 'var(--t-border)', background: 'var(--t-bg)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 border flex items-center justify-center" style={{ borderColor: '#2a2a2a' }}>
+          <div className="w-8 h-8 border flex items-center justify-center" style={{ borderColor: 'var(--t-border)' }}>
             <Brain size={16} className="text-red-500" />
           </div>
           <div>
-            <div className="text-sm font-bold text-white tracking-tight">SimulCrisis</div>
-            <div className="text-[9px] font-mono uppercase tracking-[0.15em]" style={{ color: '#6b7280' }}>Multi-Agent Crisis Intelligence</div>
+            <div className="text-sm font-bold tracking-tight" style={{ color: 'var(--t-text)' }}>SimulCrisis</div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Multi-Agent Crisis Intelligence</div>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-0.5 border ml-2" style={{ borderColor: isGeminiReady() ? '#10b981' : '#f59e0b', background: isGeminiReady() ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)' }}>
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isGeminiReady() ? '#10b981' : '#f59e0b' }} />
@@ -266,7 +269,7 @@ export default function App() {
             return (
               <button key={id} onClick={() => setActiveTab(id)}
                 className="relative pb-1 text-xs font-mono font-bold uppercase tracking-[0.12em] transition-colors"
-                style={{ color: active ? '#fff' : '#6b7280', borderBottom: active ? '2px solid #fff' : '2px solid transparent' }}>
+                style={{ color: active ? 'var(--t-text)' : 'var(--t-muted)', borderBottom: active ? '2px solid var(--t-text)' : '2px solid transparent' }}>
                 {tab}
               </button>
             );
@@ -277,12 +280,12 @@ export default function App() {
           {/* Dark/Light toggle */}
           <button onClick={() => setDarkMode(!darkMode)}
             className="w-8 h-8 border flex items-center justify-center transition-colors hover:bg-white/10"
-            style={{ borderColor: '#2a2a2a' }}>
+            style={{ borderColor: 'var(--t-border)' }}>
             {darkMode ? <Sun size={14} style={{ color: '#f59e0b' }} /> : <Moon size={14} style={{ color: '#6366f1' }} />}
           </button>
           <div className="text-right">
-            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: '#6b7280' }}>Day</div>
-            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: darkMode ? '#fff' : '#000' }}>{dayStr}</div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: 'var(--t-muted)' }}>Day</div>
+            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: 'var(--t-text)' }}>{dayStr}</div>
           </div>
         </div>
       </header>
@@ -292,11 +295,11 @@ export default function App() {
         {crisisAlert && (
           <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
             className="absolute top-14 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 border"
-            style={{ background: '#0a0000', borderColor: '#ef4444' }}>
+            style={{ background: 'var(--t-panel)', borderColor: '#ef4444' }}>
             <AlertTriangle size={16} className="text-red-500" />
             <div>
               <div className="text-[9px] font-mono font-bold uppercase tracking-[0.15em] text-red-500">Crisis Injected</div>
-              <div className="text-sm font-bold text-white">{crisisAlert}</div>
+              <div className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{crisisAlert}</div>
             </div>
           </motion.div>
         )}
@@ -307,7 +310,7 @@ export default function App() {
         <main className="flex-1 min-h-0 flex relative">
 
           {/* ── LEFT COLUMN ── */}
-          <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: '380px', borderColor: '#2a2a2a' }}>
+          <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: `${leftW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
             {/* City Grid */}
             <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
 
@@ -319,8 +322,8 @@ export default function App() {
 
               <div className="px-4 py-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: '#6b7280' }}>Simulation Day</span>
-                  <span className="text-xl font-black font-mono text-white">{dayStr}</span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Simulation Day</span>
+                  <span className="text-xl font-black font-mono" style={{ color: 'var(--t-text)' }}>{dayStr}</span>
                 </div>
 
                 <div className="flex gap-2">
@@ -377,9 +380,9 @@ export default function App() {
                       {CRISIS_EVENTS.map(e => (
                         <button key={e.id} onClick={() => { crisis(e); setShowCrisis(false); }}
                           className="w-full text-left px-3 py-2 border transition-all hover:border-red-500/50"
-                          style={{ borderColor: '#2a2a2a', background: '#0f0f0f' }}>
-                          <div className="text-xs font-bold text-white">{e.name}</div>
-                          <div className="text-[10px] font-mono" style={{ color: '#6b7280' }}>{e.description}</div>
+                          style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
+                          <div className="text-xs font-bold" style={{ color: 'var(--t-text)' }}>{e.name}</div>
+                          <div className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>{e.description}</div>
                         </button>
                       ))}
                     </motion.div>
@@ -388,6 +391,19 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {/* ── LEFT RESIZE HANDLE ── */}
+          <div className="resize-handle" onMouseDown={e => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startW = leftW;
+            const onMove = ev => setLeftW(Math.max(280, Math.min(500, startW + ev.clientX - startX)));
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }} />
 
           {/* ── CENTER: Agent Council ── */}
           <div className="flex-1 flex flex-col min-h-0">
@@ -404,8 +420,21 @@ export default function App() {
             />
           </div>
 
+          {/* ── RIGHT RESIZE HANDLE ── */}
+          <div className="resize-handle" onMouseDown={e => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startW = rightW;
+            const onMove = ev => setRightW(Math.max(280, Math.min(500, startW - (ev.clientX - startX))));
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }} />
+
           {/* ── RIGHT: Live Intelligence ── */}
-          <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: '360px', borderColor: '#2a2a2a' }}>
+          <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: `${rightW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
             <div className="tac-panel-header">
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Live Intelligence
@@ -422,15 +451,15 @@ export default function App() {
             </div>
 
             {/* Gauges */}
-            <div className="grid grid-cols-2 border-t" style={{ borderColor: '#2a2a2a' }}>
+            <div className="grid grid-cols-2 border-t" style={{ borderColor: 'var(--t-border)' }}>
               <GaugeRow label="Economy" value={Math.round(cs.economyIndex)} color="#f59e0b" />
               <GaugeRow label="Morale" value={Math.round(cs.publicMorale)} color="#8b5cf6" />
             </div>
 
             {/* Infection Curve */}
-            <div className="border-t px-4 py-3" style={{ borderColor: '#2a2a2a' }}>
+            <div className="border-t px-4 py-3" style={{ borderColor: 'var(--t-border)' }}>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: '#9ca3af' }}>Infection Curve</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Infection Curve</span>
                 <div className="flex gap-3">
                   <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#ef4444' }}>■ Infected</span>
                   <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#10b981' }}>■ Recovered</span>
@@ -457,9 +486,9 @@ export default function App() {
             </div>
 
             {/* Stability Index */}
-            <div className="border-t px-4 py-3" style={{ borderColor: '#2a2a2a' }}>
+            <div className="border-t px-4 py-3" style={{ borderColor: 'var(--t-border)' }}>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: '#9ca3af' }}>Stability Index</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Stability Index</span>
                 <div className="flex gap-3">
                   <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#f59e0b' }}>— Economy</span>
                   <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#8b5cf6' }}>— Morale</span>
@@ -482,9 +511,9 @@ export default function App() {
             </div>
 
             {/* Zone Summary */}
-            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: '#2a2a2a' }}>
-              <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>Zones affected: <span className="text-white font-bold">{cs.activeZones}/36</span></span>
-              <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>Under lockdown: <span className="text-white font-bold">{cs.lockdownZones}</span></span>
+            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: 'var(--t-border)' }}>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Zones affected: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.activeZones}/36</span></span>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Under lockdown: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.lockdownZones}</span></span>
             </div>
           </div>
 
@@ -510,7 +539,7 @@ export default function App() {
 
       {/* ═══ FOOTER ═══ */}
       <footer className="h-[32px] flex-shrink-0 flex items-center justify-between px-5 border-t text-[9px] font-mono uppercase tracking-[0.15em]"
-        style={{ borderColor: '#2a2a2a', color: '#4b5563' }}>
+        style={{ borderColor: 'var(--t-border)', color: 'var(--t-dim)' }}>
         <span>SIR Model v2.0 · Grid: 6×6 (36 Zones) · Pop: 1,200,000</span>
         <span>Agents: 4 Active · Decisions: {debates.length} · TechFusion 2.0 — Intelligent Systems</span>
       </footer>

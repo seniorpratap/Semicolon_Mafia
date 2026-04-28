@@ -46,7 +46,7 @@ export default function DecisionLog({ debates }) {
           const isExpanded = expandedId === realIndex;
 
           return (
-            <div key={realIndex} className="border" style={{ borderColor: '#2a2a2a', background: '#0a0a0a' }}>
+            <div key={realIndex} className="border" style={{ borderColor: 'var(--t-border)', background: 'var(--t-panel)' }}>
               {/* Collapsed Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : realIndex)}
@@ -54,23 +54,23 @@ export default function DecisionLog({ debates }) {
               >
                 <div className="flex items-center gap-1.5">
                   <Clock size={11} style={{ color: '#6b7280' }} />
-                  <span className="text-[11px] font-mono font-bold text-white">Day {debate.day}</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--t-text)' }}>Day {debate.day}</span>
                 </div>
 
                 {debate.userAdvisory && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 border" style={{ borderColor: '#2a2a2a' }}>
+                  <span className="flex items-center gap-1 px-2 py-0.5 border" style={{ borderColor: 'var(--t-border)' }}>
                     <MessageSquare size={9} style={{ color: '#3b82f6' }} />
                     <span className="text-[8px] font-mono font-bold uppercase" style={{ color: '#3b82f6' }}>Advisory</span>
                   </span>
                 )}
 
-                <span className="flex-1 text-[10px] font-mono truncate px-2" style={{ color: '#6b7280' }}>
+                <span className="flex-1 text-[10px] font-mono truncate px-2" style={{ color: 'var(--t-muted)' }}>
                   {debate.coordinator?.substring(0, 80)}...
                 </span>
 
                 {isExpanded
-                  ? <ChevronDown size={13} style={{ color: '#6b7280', flexShrink: 0 }} />
-                  : <ChevronRight size={13} style={{ color: '#6b7280', flexShrink: 0 }} />
+                  ? <ChevronDown size={13} style={{ color: 'var(--t-muted)', flexShrink: 0 }} />
+                  : <ChevronRight size={13} style={{ color: 'var(--t-muted)', flexShrink: 0 }} />
                 }
               </button>
 
@@ -84,17 +84,17 @@ export default function DecisionLog({ debates }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: '#2a2a2a' }}>
+                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: 'var(--t-border)' }}>
                       {/* Advisory */}
                       {debate.userAdvisory && (
-                        <div className="mt-3 px-3 py-2 border-l-2" style={{ borderLeftColor: '#3b82f6', background: '#0f0f0f' }}>
+                        <div className="mt-3 px-3 py-2 border-l-2" style={{ borderLeftColor: '#3b82f6', background: 'var(--t-input)' }}>
                           <div className="flex items-center gap-1.5 mb-1">
                             <span className="text-[9px]">🗣️</span>
                             <span className="text-[9px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: '#3b82f6' }}>
                               External Advisory
                             </span>
                           </div>
-                          <p className="text-[11px] font-mono leading-relaxed pl-4" style={{ color: '#9ca3af' }}>
+                          <p className="text-[11px] font-mono leading-relaxed pl-4" style={{ color: 'var(--t-dim)' }}>
                             "{debate.userAdvisory}"
                           </p>
                         </div>
@@ -109,16 +109,16 @@ export default function DecisionLog({ debates }) {
                         return (
                           <div key={agentId} className="mt-2 px-3 py-3 border-l-2" style={{
                             borderLeftColor: agent.color,
-                            background: '#0f0f0f'
+                            background: 'var(--t-input)'
                           }}>
                             <div className="flex items-center gap-2 mb-1.5">
                               <span className="text-[11px]">{agent.emoji}</span>
                               <span className="text-[10px] font-bold" style={{ color: agent.color }}>
                                 {agent.name}
                               </span>
-                              <span className="text-[8px] font-mono" style={{ color: '#6b7280' }}>— {agent.role}</span>
+                              <span className="text-[8px] font-mono" style={{ color: 'var(--t-muted)' }}>— {agent.role}</span>
                             </div>
-                            <p className="text-[11px] font-mono leading-[1.7] pl-5" style={{ color: '#9ca3af' }}>{msg}</p>
+                            <p className="text-[11px] font-mono leading-[1.7] pl-5" style={{ color: 'var(--t-dim)' }}>{msg}</p>
                           </div>
                         );
                       })}
@@ -132,7 +132,7 @@ export default function DecisionLog({ debates }) {
                               Final Decision — Coordinator
                             </span>
                           </div>
-                          <p className="text-[11px] font-mono leading-[1.8] whitespace-pre-wrap" style={{ color: '#d1d5db' }}>
+                          <p className="text-[11px] font-mono leading-[1.8] whitespace-pre-wrap" style={{ color: 'var(--t-text2)' }}>
                             {debate.coordinator}
                           </p>
                         </div>

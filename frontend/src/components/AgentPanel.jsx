@@ -4,6 +4,37 @@ import { AGENTS } from '../engine/agents';
 import { useTypewriter } from '../hooks/useEffects';
 
 /**
+ * Simple markdown renderer for agent messages
+ * Handles **bold**, - bullet lists, numbered lists, line breaks
+ */
+function renderMarkdown(text) {
+  if (!text) return null;
+
+  return text.split('\n').map((line, i) => {
+    // Parse **bold** within line
+    const parts = line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+
+    // Numbered list or bullet
+    const isBullet = line.match(/^[-•]\s/);
+    const isNumber = line.match(/^\d+\.\s/);
+
+    if (isBullet || isNumber) {
+      return <div key={i} className="pl-3 py-0.5 text-slate-400">{parts}</div>;
+    }
+
+    // Empty line = spacer
+    if (line.trim() === '') return <div key={i} className="h-1.5" />;
+
+    return <div key={i}>{parts}</div>;
+  });
+}
+
+/**
  * Single agent message with typewriter effect
  */
 function AgentMessage({ agentId, message }) {
@@ -69,9 +100,9 @@ function AgentMessage({ agentId, message }) {
         </div>
       ) : (
         <div className="pl-9">
-          <p className={`text-[11px] text-slate-300/90 leading-[1.6] whitespace-pre-wrap ${!isDone ? 'cursor-blink' : ''}`}>
-            {displayed}
-          </p>
+          <div className={`text-[11px] text-slate-300/90 leading-[1.7] ${!isDone ? 'cursor-blink' : ''}`}>
+            {renderMarkdown(displayed)}
+          </div>
         </div>
       )}
     </motion.div>

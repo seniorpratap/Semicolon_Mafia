@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Brain, Activity, GitBranch } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, Activity, GitBranch, AlertTriangle, Shield, Radio } from 'lucide-react';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
@@ -13,14 +13,12 @@ import { runAgentDebate, parseDecisionAction } from './engine/agents';
 
 import './index.css';
 
-// ─── Tabs ────────────────────────────────────────────────
 const TABS = [
-  { id: 'sim', label: 'Simulation', icon: Activity },
+  { id: 'sim', label: 'Dashboard', icon: Activity },
   { id: 'decisions', label: 'Decision Log', icon: GitBranch },
 ];
 
 export default function App() {
-  // ── State ──
   const [simState, setSimState] = useState(() => createSimState());
   const [history, setHistory] = useState([]);
   const [agentMessages, setAgentMessages] = useState({});
@@ -31,11 +29,12 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [activeTab, setActiveTab] = useState('sim');
   const [latestAdvisory, setLatestAdvisory] = useState('');
+  const [crisisAlert, setCrisisAlert] = useState(null);
   const intervalRef = useRef(null);
 
   const currentStats = getStats(simState);
 
-  // ── Record history each day ──
+  // Record history
   useEffect(() => {
     if (simState.day > 0) {
       const stats = getStats(simState);
@@ -50,7 +49,7 @@ export default function App() {
     }
   }, [simState.day]);
 
-  // ── Auto-advance simulation ──
+  // Auto-advance
   const tickSimulation = useCallback(() => {
     setSimState(prev => advanceDay(prev));
   }, []);
@@ -64,7 +63,7 @@ export default function App() {
     return () => clearInterval(intervalRef.current);
   }, [isRunning, isPaused, isDebating, tickSimulation]);
 
-  // ── Trigger agent debate ──
+  // Trigger debate
   const triggerDebate = useCallback(async (advisory = '') => {
     setIsDebating(true);
     setIsPaused(true);
@@ -78,190 +77,230 @@ export default function App() {
     }));
 
     const debate = await runAgentDebate(
-      stats,
-      simState.zones,
-      simState.day,
-      recentDecisions,
+      stats, simState.zones, simState.day, recentDecisions,
       advisory || latestAdvisory,
       (agentId, message) => {
         setAgentMessages(prev => ({ ...prev, [agentId]: message }));
       }
     );
 
-    // Parse and apply coordinator's decision
     const actions = parseDecisionAction(debate.coordinator);
     let newState = simState;
     actions.forEach(action => {
       newState = applyDecision(newState, action);
     });
     setSimState(newState);
-
     setDebates(prev => [...prev, debate]);
     setIsDebating(false);
     setLatestAdvisory('');
   }, [simState, debates, latestAdvisory]);
 
-  // ── Advance 5 days + trigger debate ──
   const handleAdvance = useCallback(async () => {
     let state = simState;
-    for (let i = 0; i < 5; i++) {
-      state = advanceDay(state);
-    }
+    for (let i = 0; i < 5; i++) state = advanceDay(state);
     setSimState(state);
-    // Small delay so UI updates before debate starts
     setTimeout(() => triggerDebate(), 300);
   }, [simState, triggerDebate]);
 
-  // ── Play / Pause ──
-  const handlePlay = () => {
-    setIsRunning(true);
-    setIsPaused(false);
-    if (simState.day === 0) tickSimulation();
-  };
-
+  const handlePlay = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tickSimulation(); };
   const handlePause = () => setIsPaused(true);
 
-  // ── Inject crisis ──
   const handleCrisis = (event) => {
     setSimState(prev => event.apply(prev));
-    // Auto-trigger debate after crisis
+    setCrisisAlert(event.name);
+    setTimeout(() => setCrisisAlert(null), 4000);
     setTimeout(() => triggerDebate(), 500);
   };
 
-  // ── User advisory ──
-  const handleAdvisory = (text) => {
-    setIsPaused(true);
-    triggerDebate(text);
-  };
+  const handleAdvisory = (text) => { setIsPaused(true); triggerDebate(text); };
 
-  // ── Reset ──
   const handleReset = () => {
     clearInterval(intervalRef.current);
     setSimState(createSimState());
-    setHistory([]);
-    setAgentMessages({});
-    setDebates([]);
-    setIsRunning(false);
-    setIsPaused(false);
-    setIsDebating(false);
-    setSelectedZone(null);
-    setLatestAdvisory('');
+    setHistory([]); setAgentMessages({}); setDebates([]);
+    setIsRunning(false); setIsPaused(false); setIsDebating(false);
+    setSelectedZone(null); setLatestAdvisory('');
   };
 
-  // ── Auto-trigger debate every 10 days ──
+  // Auto-debate every 10 days
   useEffect(() => {
     if (simState.day > 0 && simState.day % 10 === 0 && isRunning && !isDebating) {
       triggerDebate();
     }
   }, [simState.day]);
 
-  return (
-    <div className="min-h-screen relative overflow-hidden bg-surface">
-      {/* Background Orbs */}
-      <div className="bg-orb" style={{ width: 500, height: 500, top: '-10%', left: '-8%', background: '#6366f1' }} />
-      <div className="bg-orb" style={{ width: 400, height: 400, bottom: '-5%', right: '-5%', background: '#ef4444', animationDelay: '-7s' }} />
-      <div className="bg-orb" style={{ width: 300, height: 300, top: '40%', left: '60%', background: '#06b6d4', animationDelay: '-14s' }} />
+  const threatLevel = currentStats.totalInfected > 5000 ? 'CRITICAL'
+    : currentStats.totalInfected > 2000 ? 'SEVERE'
+    : currentStats.totalInfected > 500 ? 'HIGH'
+    : currentStats.totalInfected > 100 ? 'ELEVATED'
+    : 'LOW';
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 py-4 h-screen flex flex-col">
-        {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-4 flex-shrink-0"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
-              <Brain size={20} className="text-white" />
+  const threatColor = {
+    CRITICAL: 'text-red-500', SEVERE: 'text-red-400',
+    HIGH: 'text-orange-400', ELEVATED: 'text-amber-400', LOW: 'text-emerald-400',
+  }[threatLevel];
+
+  return (
+    <div className="h-screen flex flex-col bg-surface overflow-hidden">
+      {/* ═══ HEADER BAR ═══ */}
+      <header className="flex-shrink-0 glass-strong border-b border-white/[0.04] px-5 py-2.5 flex items-center justify-between relative z-50">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 via-purple-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <Brain size={18} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold gradient-text">SimulCrisis</h1>
-              <p className="text-[10px] text-slate-500">Multi-Agent Crisis Decision Simulator</p>
-            </div>
+            {isRunning && !isPaused && (
+              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-surface animate-pulse" />
+            )}
           </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-tight">
+              <span className="gradient-text">SimulCrisis</span>
+            </h1>
+            <p className="text-[9px] text-slate-600 tracking-wider uppercase">Multi-Agent Crisis Intelligence</p>
+          </div>
+        </div>
+
+        {/* Center: Threat Level + Tabs */}
+        <div className="flex items-center gap-6">
+          {/* Threat Level Badge */}
+          <motion.div
+            key={threatLevel}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${
+              threatLevel === 'CRITICAL' || threatLevel === 'SEVERE'
+                ? 'bg-red-500/10 border-red-500/20' : 'bg-surface-lighter/50 border-white/[0.06]'
+            }`}
+          >
+            <AlertTriangle size={11} className={threatColor} />
+            <span className={`text-[10px] font-bold tracking-wider ${threatColor}`}>
+              THREAT: {threatLevel}
+            </span>
+          </motion.div>
 
           {/* Tabs */}
-          <nav className="flex gap-1 glass rounded-full p-1">
+          <nav className="flex gap-0.5 glass-subtle rounded-full p-0.5">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-medium transition-all duration-300 ${
                   activeTab === tab.id
-                    ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/20'
+                    : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                <tab.icon size={13} />
+                <tab.icon size={12} />
                 {tab.label}
               </button>
             ))}
           </nav>
+        </div>
 
-          {/* Live Indicator */}
-          <div className="flex items-center gap-2">
-            {isRunning && !isPaused && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                LIVE
-              </span>
-            )}
-            {isDebating && (
-              <span className="text-xs text-purple-400">🧠 Agents deliberating...</span>
-            )}
-          </div>
-        </motion.header>
-
-        {/* Main Content */}
-        <div className="flex-1 min-h-0">
-          {activeTab === 'sim' && (
-            <div className="grid grid-cols-12 gap-3 h-full">
-              {/* Left Column: Map + Controls */}
-              <div className="col-span-3 flex flex-col gap-3 overflow-y-auto">
-                <CityGrid
-                  zones={simState.zones}
-                  onZoneClick={setSelectedZone}
-                  selectedZone={selectedZone}
-                />
-                <ControlPanel
-                  isRunning={isRunning}
-                  isPaused={isPaused}
-                  day={simState.day}
-                  onPlay={handlePlay}
-                  onPause={handlePause}
-                  onAdvance={handleAdvance}
-                  onInjectCrisis={handleCrisis}
-                  onUserAdvisory={handleAdvisory}
-                  onReset={handleReset}
-                  isDebating={isDebating}
-                />
-              </div>
-
-              {/* Center Column: Agent Panel */}
-              <div className="col-span-6 overflow-hidden">
-                <AgentPanel
-                  agentMessages={agentMessages}
-                  isDebating={isDebating}
-                  userAdvisory={latestAdvisory}
-                />
-              </div>
-
-              {/* Right Column: Stats */}
-              <div className="col-span-3 overflow-y-auto">
-                <StatsPanel
-                  history={history}
-                  currentStats={currentStats}
-                />
-              </div>
+        {/* Right: Status */}
+        <div className="flex items-center gap-4">
+          {isDebating && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/15"
+            >
+              <Shield size={11} className="text-purple-400" />
+              <span className="text-[10px] text-purple-300 font-medium">Council Active</span>
+            </motion.div>
+          )}
+          {isRunning && !isPaused && (
+            <div className="flex items-center gap-1.5">
+              <Radio size={11} className="text-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-400 tracking-wider">LIVE</span>
             </div>
           )}
+          <div className="text-right">
+            <div className="text-[9px] text-slate-600 uppercase tracking-wider">Day</div>
+            <div className="text-sm font-bold font-mono text-white">{simState.day}</div>
+          </div>
+        </div>
+      </header>
 
-          {activeTab === 'decisions' && (
-            <div className="max-w-4xl mx-auto h-full overflow-y-auto">
+      {/* ═══ CRISIS ALERT BANNER ═══ */}
+      <AnimatePresence>
+        {crisisAlert && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-red-500/10 border-b border-red-500/20 px-5 py-2 flex items-center justify-center gap-2 overflow-hidden"
+          >
+            <AlertTriangle size={14} className="text-red-400" />
+            <span className="text-xs font-semibold text-red-300 tracking-wide">
+              CRISIS INJECTED: {crisisAlert}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ MAIN CONTENT ═══ */}
+      <div className="flex-1 min-h-0 relative">
+        {/* Background effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-500/[0.03] rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-red-500/[0.03] rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cyan-500/[0.02] rounded-full blur-[100px]" />
+        </div>
+
+        {activeTab === 'sim' && (
+          <div className="h-full grid grid-cols-12 gap-3 p-3 relative z-10">
+            {/* LEFT: Map + Controls */}
+            <div className="col-span-3 flex flex-col gap-3 overflow-y-auto scrollbar-thin">
+              <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
+              <ControlPanel
+                isRunning={isRunning} isPaused={isPaused} day={simState.day}
+                onPlay={handlePlay} onPause={handlePause} onAdvance={handleAdvance}
+                onInjectCrisis={handleCrisis} onUserAdvisory={handleAdvisory}
+                onReset={handleReset} isDebating={isDebating}
+              />
+            </div>
+
+            {/* CENTER: Agent Council */}
+            <div className="col-span-6 overflow-hidden">
+              <AgentPanel agentMessages={agentMessages} isDebating={isDebating} userAdvisory={latestAdvisory} />
+            </div>
+
+            {/* RIGHT: Intelligence */}
+            <div className="col-span-3 overflow-y-auto scrollbar-thin">
+              <StatsPanel history={history} currentStats={currentStats} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'decisions' && (
+          <div className="h-full p-3 relative z-10 overflow-y-auto">
+            <div className="max-w-5xl mx-auto">
               <DecisionLog debates={debates} />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* ═══ FOOTER STATUS BAR ═══ */}
+      <footer className="flex-shrink-0 border-t border-white/[0.04] px-5 py-1.5 flex items-center justify-between bg-surface/80 backdrop-blur-sm">
+        <div className="flex items-center gap-4 text-[9px] text-slate-600">
+          <span>SIR Model v2.0</span>
+          <span>•</span>
+          <span>Grid: 6×6 ({simState.zones.length} zones)</span>
+          <span>•</span>
+          <span>Pop: {currentStats.totalSusceptible?.toLocaleString() || '—'}</span>
+        </div>
+        <div className="flex items-center gap-4 text-[9px] text-slate-600">
+          <span>Agents: 4 active</span>
+          <span>•</span>
+          <span>Decisions: {debates.length}</span>
+          <span>•</span>
+          <span className="text-primary-light font-medium">TechFusion 2.0 — Intelligent Systems</span>
+        </div>
+      </footer>
     </div>
   );
 }

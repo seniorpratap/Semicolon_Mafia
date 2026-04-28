@@ -74,9 +74,7 @@ export default function App() {
     }
     // Save current messages as "previous" before clearing
     setIsDebating(true); setIsPaused(true);
-    if (agentMessages.length > 0) setPreviousMessages(agentMessages);
-    // Defer clear to next tick so React batches with the "previous" save
-    await new Promise(r => setTimeout(r, 50));
+    if (agentMessages.length > 0) setPreviousMessages([...agentMessages]);
     setAgentMessages([]); setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
     const abortController = new AbortController();
@@ -651,8 +649,9 @@ export default function App() {
                 onClose={() => setSelectedZone(null)}
                 onAction={(action) => {
                   setSimState(prev => applyDecision(prev, action));
+                  setSelectedZone(null);
                   setActionToast(action.summary || action.action);
-                  setTimeout(() => { setActionToast(null); setSelectedZone(null); }, 1200);
+                  setTimeout(() => setActionToast(null), 2000);
                 }}
               />
             )}

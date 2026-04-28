@@ -183,7 +183,7 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
 
       {/* Messages + Actions */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-y">
-        {agentMessages.length === 0 && (!previousMessages || previousMessages.length === 0) ? (
+        {agentMessages.length === 0 && (!previousMessages || previousMessages.length === 0) && !isDebating ? (
           <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
             <div className="w-16 h-16 border-2 border-dashed flex items-center justify-center mb-4"
               style={{ borderColor: 'var(--t-border)' }}>
@@ -192,6 +192,11 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
             <span className="text-sm font-mono text-center px-8" style={{ color: 'var(--t-dim)' }}>
               Advance the simulation or inject a crisis to trigger the agent council debate.
             </span>
+          </div>
+        ) : agentMessages.length === 0 && isDebating ? (
+          <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
+            <div className="dots-loader mb-3" style={{ color: '#10b981' }}><span /><span /><span /></div>
+            <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Council convening...</span>
           </div>
         ) : (<>
           {/* Previous cycle messages (collapsible) */}

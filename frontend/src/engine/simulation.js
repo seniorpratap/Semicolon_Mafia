@@ -157,19 +157,37 @@ export function advanceDay(state) {
     });
   });
 
-  // ── Economy impact ──
-  let economyHit = 0;
+  // ── Economy impact (infections + lockdowns + hospital crisis) ──
+  const totalInfected = newZones.reduce((s, z) => s + z.infected, 0);
+  const totalPop = newZones.reduce((s, z) => s + z.population, 0);
+  let economyDrop = 0;
+  // Lockdown economic damage
   newZones.forEach(z => {
-    if (z.lockdownLevel === 1) economyHit += z.economicValue * 0.3;
-    if (z.lockdownLevel === 2) economyHit += z.economicValue * 0.7;
+    if (z.lockdownLevel === 1) economyDrop += 0.15;  // partial lockdown per zone
+    if (z.lockdownLevel === 2) economyDrop += 0.35;  // full lockdown per zone
   });
-  const totalEconValue = newZones.reduce((s, z) => s + z.economicValue, 0);
-  newState.economyIndex = Math.max(0, state.economyIndex - (economyHit / totalEconValue) * 2);
+  // Infection-driven workforce loss (people can't work when sick)
+  const infectionPenalty = (totalInfected / totalPop) * 15;
+  // Hospital overflow panic
+  const overwhelmed = newZones.filter(z => z.hospitalCapacity > 0 && z.hospitalOccupancy > z.hospitalCapacity).length;
+  const overflowPenalty = overwhelmed * 0.5;
 
-  // ── Public morale ──
+  newState.economyIndex = Math.max(0, Math.min(100,
+    state.economyIndex - economyDrop - infectionPenalty - overflowPenalty
+    + 0.1  // tiny natural recovery
+  ));
+
+  // ── Public morale (cumulative pressure, slow recovery) ──
   const totalDeaths = newZones.reduce((s, z) => s + z.deceased, 0);
   const lockdownZones = newZones.filter(z => z.lockdownLevel > 0).length;
-  newState.publicMorale = Math.max(0, 100 - (totalDeaths / 100) - (lockdownZones * 2));
+  const deathShock = totalDeaths > 100 ? 0.3 : totalDeaths > 50 ? 0.15 : 0.05;
+  const lockdownFatigue = lockdownZones * 0.2;
+  const infectionFear = (totalInfected / totalPop) * 8;
+  const naturalRecovery = lockdownZones === 0 && totalInfected < 500 ? 0.2 : 0;
+
+  newState.publicMorale = Math.max(0, Math.min(100,
+    state.publicMorale - deathShock - lockdownFatigue - infectionFear + naturalRecovery
+  ));
 
   newState.zones = newZones;
   return newState;

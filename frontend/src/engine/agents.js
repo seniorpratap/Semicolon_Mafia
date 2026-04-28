@@ -2,11 +2,11 @@
  * SimulCrisis — AI Agent System
  * ==============================
  * 4 AI agents with conflicting priorities debate crisis response.
- * Each agent receives the same situation but reasons from their perspective.
- * The Coordinator weighs all inputs and makes a final explainable decision.
+ * Uses Gemini 2.0 Flash directly from the client (no backend needed).
+ * Falls back to intelligent mock responses if API key is not configured.
  */
 
-const API_BASE = '/api';
+import { isGeminiReady, generateAgentResponseStreaming } from '../services/gemini';
 
 // ─── Agent Definitions ───────────────────────────────────
 export const AGENTS = {
@@ -198,10 +198,8 @@ function getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisor
   return mocks[agentId]();
 }
 
-// ─── Single Agent Response ────────────────────────────────
-async function getAgentResponse(agentId, situationReport, otherAgentInputs = '', userAdvisory = '') {
-  const agent = AGENTS[agentId];
-
+// ─── Build User Prompt ────────────────────────────────────
+function buildAgentPrompt(agent, situationReport, otherAgentInputs, userAdvisory) {
   let prompt = `CURRENT SITUATION:\n${situationReport}`;
 
   if (otherAgentInputs) {
@@ -213,55 +211,76 @@ async function getAgentResponse(agentId, situationReport, otherAgentInputs = '',
   }
 
   prompt += `\n\nGiven the above situation, what is your recommendation? Remember your role: ${agent.role}. Your priority: ${agent.priority}.`;
+  return prompt;
+}
 
-  try {
-    const response = await fetch(`${API_BASE}/agent-respond`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agent_id: agentId,
-        system_prompt: agent.systemPrompt,
-        prompt: prompt,
-      }),
-    });
+// ─── Single Agent Response (Gemini Direct + Mock Fallback) ─
+async function getAgentResponse(agentId, situationReport, otherAgentInputs = '', userAdvisory = '', onStream = null) {
+  const agent = AGENTS[agentId];
+  const prompt = buildAgentPrompt(agent, situationReport, otherAgentInputs, userAdvisory);
 
-    if (!response.ok) throw new Error('API error');
-    const data = await response.json();
-    return data.response;
-  } catch (err) {
-    // Intelligent fallback — works without backend
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 1200)); // simulate thinking delay
-    return getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisory);
+  // ── Try Gemini first ──
+  if (isGeminiReady()) {
+    try {
+      const response = await generateAgentResponseStreaming(
+        agent.systemPrompt,
+        prompt,
+        onStream  // streams partial text for typewriter effect
+      );
+      return response;
+    } catch (err) {
+      console.warn(`[Agent ${agentId}] Gemini failed, using mock:`, err.message);
+    }
   }
+
+  // ── Fallback: intelligent mock responses ──
+  const mockText = getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisory);
+
+  // Simulate streaming for mock responses (typewriter effect)
+  if (onStream) {
+    const words = mockText.split(' ');
+    let accumulated = '';
+    for (let i = 0; i < words.length; i++) {
+      accumulated += (i > 0 ? ' ' : '') + words[i];
+      onStream(accumulated);
+      await new Promise(r => setTimeout(r, 30 + Math.random() * 40));
+    }
+  } else {
+    await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
+  }
+
+  return mockText;
 }
 
 // ─── Run Full Agent Debate ────────────────────────────────
 export async function runAgentDebate(stats, zones, day, recentDecisions = [], userAdvisory = '', onAgentSpeak = null) {
   const situationReport = buildSituationReport(stats, zones, day, recentDecisions);
 
+  // Helper: creates a streaming callback for a specific agent
+  const makeStreamCb = (agentId) => {
+    if (!onAgentSpeak) return null;
+    return (partialText) => onAgentSpeak(agentId, partialText);
+  };
+
   // Step 1: Health Director speaks first
   if (onAgentSpeak) onAgentSpeak('health', 'thinking');
-  const healthResponse = await getAgentResponse('health', situationReport, '', userAdvisory);
-  if (onAgentSpeak) onAgentSpeak('health', healthResponse);
+  const healthResponse = await getAgentResponse('health', situationReport, '', userAdvisory, makeStreamCb('health'));
 
   // Step 2: Economic Advisor responds (seeing Health's position)
   if (onAgentSpeak) onAgentSpeak('economy', 'thinking');
   const economyResponse = await getAgentResponse('economy', situationReport,
-    `Health Director says: "${healthResponse}"`, userAdvisory);
-  if (onAgentSpeak) onAgentSpeak('economy', economyResponse);
+    `Health Director says: "${healthResponse}"`, userAdvisory, makeStreamCb('economy'));
 
   // Step 3: Safety Chief responds (seeing both)
   if (onAgentSpeak) onAgentSpeak('safety', 'thinking');
   const safetyResponse = await getAgentResponse('safety', situationReport,
-    `Health Director says: "${healthResponse}"\nEconomic Advisor says: "${economyResponse}"`, userAdvisory);
-  if (onAgentSpeak) onAgentSpeak('safety', safetyResponse);
+    `Health Director says: "${healthResponse}"\nEconomic Advisor says: "${economyResponse}"`, userAdvisory, makeStreamCb('safety'));
 
   // Step 4: Coordinator makes final decision (seeing all three)
   if (onAgentSpeak) onAgentSpeak('coordinator', 'thinking');
   const coordinatorResponse = await getAgentResponse('coordinator', situationReport,
     `Health Director: "${healthResponse}"\nEconomic Advisor: "${economyResponse}"\nPublic Safety: "${safetyResponse}"`,
-    userAdvisory);
-  if (onAgentSpeak) onAgentSpeak('coordinator', coordinatorResponse);
+    userAdvisory, makeStreamCb('coordinator'));
 
   return {
     health: healthResponse,

@@ -1,17 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Activity, AlertTriangle, Radio, Shield, Zap, Heart, Users,
-  TrendingUp, Play, Pause, FastForward, RotateCcw, Send, CheckCircle, Database
-} from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, CheckCircle, Database } from 'lucide-react';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
 import DecisionLog from './components/DecisionLog';
+import ZoneDetail from './components/ZoneDetail';
+import ResizeHandle from './components/ResizeHandle';
 
 import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
+import { isGeminiReady } from './services/gemini';
 import { useAnimatedNumber } from './hooks/useEffects';
 
 import './index.css';
@@ -25,26 +25,36 @@ export default function App() {
   const [selectedZone, setSelectedZone] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [showDecisions, setShowDecisions] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [latestAdvisory, setLatestAdvisory] = useState('');
   const [crisisAlert, setCrisisAlert] = useState(null);
   const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState('');
+  const [darkMode, setDarkMode] = useState(true);
+  const [leftW, setLeftW] = useState(380);
+  const [rightW, setRightW] = useState(360);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const intervalRef = useRef(null);
+  const demoRef = useRef(false);
+  const demoAbortRef = useRef(null);
 
   const cs = getStats(simState);
 
   useEffect(() => {
     if (simState.day > 0) {
       const s = getStats(simState);
-      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased }]);
+      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased, economy: s.economyIndex, morale: s.publicMorale }]);
     }
   }, [simState.day]);
 
   const tick = useCallback(() => setSimState(p => advanceDay(p)), []);
 
   useEffect(() => {
-    if (isRunning && !isPaused && !isDebating) intervalRef.current = setInterval(tick, 1500);
+    if (isRunning && !isPaused && !isDebating) intervalRef.current = setInterval(tick, 1000);
     else clearInterval(intervalRef.current);
     return () => clearInterval(intervalRef.current);
   }, [isRunning, isPaused, isDebating, tick]);
@@ -56,7 +66,13 @@ export default function App() {
     const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
     const msgs = [];
     const debate = await runAgentDebate(s, simState.zones, simState.day, rd, adv || latestAdvisory,
-      (id, text) => { msgs.push({ agentId: id, text }); setAgentMessages([...msgs]); }
+      (id, text) => {
+        // Upsert: update existing agent entry or add new one
+        const idx = msgs.findIndex(m => m.agentId === id);
+        if (idx >= 0) { msgs[idx] = { agentId: id, text }; }
+        else { msgs.push({ agentId: id, text }); }
+        setAgentMessages([...msgs]);
+      }
     );
     const actions = parseDecisionAction(debate.coordinator);
     let ns = simState;
@@ -71,259 +87,582 @@ export default function App() {
 
   const play = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
   const pause = () => setIsPaused(true);
-  const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 5000); setTimeout(() => triggerDebate(), 500); };
+  const crisis = (e) => { setSimState(p => e.apply(p)); setCrisisAlert(e.name); setTimeout(() => setCrisisAlert(null), 4000); setTimeout(() => triggerDebate(), 500); };
   const advisory = (t) => { setIsPaused(true); triggerDebate(t); };
-  const reset = () => { clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
+  const reset = () => { stopDemo(); clearInterval(intervalRef.current); setSimState(createSimState()); setHistory([]); setAgentMessages([]); setDebates([]); setIsRunning(false); setIsPaused(false); setIsDebating(false); setSelectedZone(null); setLatestAdvisory(''); };
 
-  useEffect(() => { if (simState.day > 0 && simState.day % 10 === 0 && isRunning && !isDebating) triggerDebate(); }, [simState.day]);
+  // ─── Demo Mode ───────────────────────────────────────────
+  const sleep = (ms) => new Promise((resolve, reject) => {
+    const id = setTimeout(resolve, ms);
+    // Store abort function so we can cancel on demo stop
+    demoAbortRef.current = () => { clearTimeout(id); reject(new Error('demo_stopped')); };
+  });
 
-  // Accessibility: Strict Color Hierarchy
-  let threatState = { level: 'Stable', icon: <CheckCircle size={18} />, color: 'var(--color-safe)' };
-  if (cs.totalInfected > 5000) threatState = { level: 'Critical', icon: <AlertTriangle size={18} />, color: 'var(--color-danger)' };
-  else if (cs.totalInfected > 2000) threatState = { level: 'Severe', icon: <AlertTriangle size={18} />, color: 'var(--color-orange)' };
-  else if (cs.totalInfected > 500) threatState = { level: 'High Risk', icon: <Activity size={18} />, color: 'var(--color-orange)' };
-  else if (cs.totalInfected > 100) threatState = { level: 'Elevated', icon: <Activity size={18} />, color: 'var(--color-info)' };
+  const stopDemo = useCallback(() => {
+    demoRef.current = false;
+    setDemoMode(false);
+    setDemoStep('');
+    if (demoAbortRef.current) { demoAbortRef.current(); demoAbortRef.current = null; }
+  }, []);
+
+  const startDemo = useCallback(async () => {
+    demoRef.current = true;
+    setDemoMode(true);
+
+    try {
+      // Phase 1: Start simulation
+      setDemoStep('Initializing simulation...');
+      setIsRunning(true); setIsPaused(false);
+      await sleep(2000);
+      if (!demoRef.current) return;
+
+      // Phase 2: Let it run for a few days, then advance + debate
+      setDemoStep('Advancing 5 days...');
+      setSimState(prev => {
+        let s = prev;
+        for (let i = 0; i < 5; i++) s = advanceDay(s);
+        return s;
+      });
+      await sleep(1500);
+      if (!demoRef.current) return;
+
+      // Phase 3: First agent debate
+      setDemoStep('Agent council deliberating...');
+      setIsDebating(true); setIsPaused(true); setAgentMessages([]);
+      const s1 = getStats(simState);
+      const debate1 = await runAgentDebate(s1, simState.zones, simState.day, [], '',
+        (id, text) => {
+          setAgentMessages(prev => {
+            const idx = prev.findIndex(m => m.agentId === id);
+            const updated = [...prev];
+            if (idx >= 0) { updated[idx] = { agentId: id, text }; }
+            else { updated.push({ agentId: id, text }); }
+            return updated;
+          });
+        }
+      );
+      if (!demoRef.current) return;
+      const actions1 = parseDecisionAction(debate1.coordinator);
+      setSimState(prev => { let ns = prev; actions1.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
+      setDebates(p => [...p, debate1]);
+      setIsDebating(false);
+      await sleep(3000);
+      if (!demoRef.current) return;
+
+      // Demo loop: crisis → advance → debate
+      const crisisQueue = [...CRISIS_EVENTS];
+      let cycleCount = 0;
+
+      while (demoRef.current && cycleCount < 5) {
+        cycleCount++;
+
+        // Inject crisis
+        if (crisisQueue.length > 0) {
+          const crisisEvent = crisisQueue.shift();
+          setDemoStep(`Crisis: ${crisisEvent.name}`);
+          setSimState(prev => crisisEvent.apply(prev));
+          setCrisisAlert(crisisEvent.name);
+          setTimeout(() => setCrisisAlert(null), 4000);
+          await sleep(3000);
+          if (!demoRef.current) return;
+        }
+
+        // Advance days
+        setDemoStep(`Cycle ${cycleCount}: Advancing 5 days...`);
+        setSimState(prev => {
+          let s = prev;
+          for (let i = 0; i < 5; i++) s = advanceDay(s);
+          return s;
+        });
+        await sleep(1500);
+        if (!demoRef.current) return;
+
+        // Agent debate
+        setDemoStep(`Cycle ${cycleCount}: Council debate...`);
+        setIsDebating(true); setIsPaused(true); setAgentMessages([]);
+
+        // Use a ref-stable way to get latest state
+        const currentState = await new Promise(resolve => {
+          setSimState(prev => { resolve(prev); return prev; });
+        });
+        const stats = getStats(currentState);
+        const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
+
+        const debate = await runAgentDebate(stats, currentState.zones, currentState.day, rd, '',
+          (id, text) => {
+            setAgentMessages(prev => {
+              const idx = prev.findIndex(m => m.agentId === id);
+              const updated = [...prev];
+              if (idx >= 0) { updated[idx] = { agentId: id, text }; }
+              else { updated.push({ agentId: id, text }); }
+              return updated;
+            });
+          }
+        );
+        if (!demoRef.current) return;
+
+        const actions = parseDecisionAction(debate.coordinator);
+        setSimState(prev => { let ns = prev; actions.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
+        setDebates(p => [...p, debate]);
+        setIsDebating(false);
+
+        setDemoStep(`Cycle ${cycleCount} complete. Next in 4s...`);
+        await sleep(4000);
+        if (!demoRef.current) return;
+      }
+
+      // Demo finished
+      setDemoStep('Demo complete.');
+      await sleep(2000);
+      stopDemo();
+
+    } catch (err) {
+      if (err.message !== 'demo_stopped') console.error('[Demo]', err);
+      // demo was stopped by user — clean exit
+    }
+  }, [simState, debates, stopDemo]);
+
+  const threat = cs.totalInfected > 5000 ? 'CRITICAL' : cs.totalInfected > 2000 ? 'SEVERE' : cs.totalInfected > 500 ? 'HIGH' : cs.totalInfected > 100 ? 'ELEVATED' : 'LOW';
+  const threatColor = { CRITICAL: '#ef4444', SEVERE: '#f97316', HIGH: '#f59e0b', ELEVATED: '#eab308', LOW: '#10b981' }[threat];
+  const threatIcon = { CRITICAL: <AlertTriangle size={18}/>, SEVERE: <AlertTriangle size={18}/>, HIGH: <Activity size={18}/>, ELEVATED: <Activity size={18}/>, LOW: <CheckCircle size={18}/> }[threat];
+
+  const dayStr = String(simState.day).padStart(3, '0');
+
+  const suggestions = ['Quarantine hotspots immediately', 'Prioritize mass testing', 'Focus on economic stability', 'Deploy emergency vaccines', 'Set up field hospitals', 'Implement night curfew'];
+
+  // Apply theme to body
+  useEffect(() => {
+    document.body.classList.toggle('light', !darkMode);
+  }, [darkMode]);
 
   const animInf = useAnimatedNumber(cs.totalInfected);
   const animRec = useAnimatedNumber(cs.totalRecovered);
   const animDec = useAnimatedNumber(cs.totalDeceased);
 
   return (
-    <div className="app-container">
-      {/* ═══ TOP NAVIGATION ═══ */}
-      <header className="main-nav">
-        <div className="flex items-center gap-4">
-          <div className="p-2 bg-white/10 rounded-lg">
-            <Shield size={24} className="text-white" />
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
+
+      {/* ═══ HEADER ═══ */}
+      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-5 border-b" style={{ borderColor: 'var(--t-border)', background: 'var(--t-bg)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border flex items-center justify-center" style={{ borderColor: 'var(--t-border)' }}>
+            <Brain size={16} className="text-red-500" />
           </div>
           <div>
-            <h1 className="text-lg font-bold leading-none tracking-tight">SimulCrisis v3</h1>
-            <p className="text-[10px] uppercase font-black opacity-60 tracking-widest mt-1">Advanced Tactical Command</p>
+            <div className="text-sm font-bold tracking-tight" style={{ color: 'var(--t-text)' }}>SimulCrisis</div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Multi-Agent Crisis Intelligence</div>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 border ml-2" style={{ borderColor: isGeminiReady() ? '#10b981' : '#f59e0b', background: isGeminiReady() ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)' }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isGeminiReady() ? '#10b981' : '#f59e0b' }} />
+            <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: isGeminiReady() ? '#10b981' : '#f59e0b' }}>
+              {isGeminiReady() ? 'Gemini Live' : 'Mock Mode'}
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 border-r border-white/10 pr-6 mr-6">
-            {isDebating && (
-              <div className="badge bg-orange animate-pulse">
-                <Radio size={12} /> Council Active
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold opacity-60 uppercase">Threat:</span>
-              <span className="badge" style={{ backgroundColor: threatState.color, color: 'white' }}>
-                {threatState.icon} {threatState.level}
-              </span>
-            </div>
+          {/* Threat pill */}
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border" style={{ borderColor: threatColor }}>
+            <div style={{ color: threatColor }}>{threatIcon}</div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: threatColor }}>
+              Threat · {threat}
+            </span>
           </div>
 
+          {/* Tabs */}
+          {['DASHBOARD', 'DECISION LOG'].map(tab => {
+            const id = tab === 'DASHBOARD' ? 'dashboard' : 'decisions';
+            const active = activeTab === id;
+            return (
+              <button key={id} onClick={() => setActiveTab(id)}
+                className="relative pb-1 text-xs font-mono font-bold uppercase tracking-[0.12em] transition-colors"
+                style={{ color: active ? 'var(--t-text)' : 'var(--t-muted)', borderBottom: active ? '2px solid var(--t-text)' : '2px solid transparent' }}>
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Dark/Light toggle */}
+          <button onClick={() => setDarkMode(!darkMode)}
+            className="w-8 h-8 border flex items-center justify-center transition-colors hover:bg-white/10"
+            style={{ borderColor: 'var(--t-border)' }}>
+            {darkMode ? <Sun size={14} style={{ color: '#f59e0b' }} /> : <Moon size={14} style={{ color: '#6366f1' }} />}
+          </button>
           <div className="text-right">
-            <div className="text-[10px] opacity-60 uppercase font-black">Simulation Day</div>
-            <div className="text-2xl font-black leading-none">{simState.day}</div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: 'var(--t-muted)' }}>Day</div>
+            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: 'var(--t-text)' }}>{dayStr}</div>
+          </div>
+        </div>
+      </header>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          {/* Threat pill */}
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border" style={{ borderColor: threatColor }}>
+            <div style={{ color: threatColor }}>{threatIcon}</div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: threatColor }}>
+              Threat · {threat}
+            </span>
+          </div>
+
+          {/* Tabs */}
+          {['DASHBOARD', 'DECISION LOG'].map(tab => {
+            const id = tab === 'DASHBOARD' ? 'dashboard' : 'decisions';
+            const active = activeTab === id;
+            return (
+              <button key={id} onClick={() => setActiveTab(id)}
+                className="relative pb-1 text-xs font-mono font-bold uppercase tracking-[0.12em] transition-colors"
+                style={{ color: active ? 'var(--t-text)' : 'var(--t-muted)', borderBottom: active ? '2px solid var(--t-text)' : '2px solid transparent' }}>
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Dark/Light toggle */}
+          <button onClick={() => setDarkMode(!darkMode)}
+            className="w-8 h-8 border flex items-center justify-center transition-colors hover:bg-white/10"
+            style={{ borderColor: 'var(--t-border)' }}>
+            {darkMode ? <Sun size={14} style={{ color: '#f59e0b' }} /> : <Moon size={14} style={{ color: '#6366f1' }} />}
+          </button>
+          <div className="text-right">
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em]" style={{ color: 'var(--t-muted)' }}>Day</div>
+            <div className="text-2xl font-black font-mono tracking-tighter leading-none" style={{ color: 'var(--t-text)' }}>{dayStr}</div>
           </div>
         </div>
       </header>
 
-      {/* ═══ CRISIS OVERLAY ═══ */}
+      {/* ═══ CRISIS TOAST ═══ */}
       <AnimatePresence>
         {crisisAlert && (
-          <motion.div initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }}
-            className="absolute top-20 left-1/2 -translate-x-1/2 z-[200] card p-4 shadow-2xl flex items-center gap-4 border-t-4 border-danger">
-            <div className="p-3 rounded-full bg-danger/10 text-danger">
-              <AlertTriangle size={24} />
-            </div>
+          <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
+            className="absolute top-14 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 border"
+            style={{ background: 'var(--t-panel)', borderColor: '#ef4444' }}>
+            <AlertTriangle size={16} className="text-red-500" />
             <div>
-              <h3 className="text-xs font-black text-danger uppercase tracking-widest">Emergency Alert</h3>
-              <p className="text-lg font-bold text-navy">{crisisAlert}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="text-[9px] font-mono font-bold uppercase tracking-[0.15em] text-red-500">Crisis Injected</div>
+              <div className="text-sm font-bold" style={{ color: '      {/* ═══ MAIN CONTENT ═══ */}
+      {activeTab === 'dashboard' ? (
+        <main className="flex-1 min-h-0 flex relative">
 
-      <main className="main-content">
-        <div className="dashboard-container h-full">
-          <div className="grid grid-cols-12 gap-4 h-full min-h-0">
-            
-            {/* ── LEFT: Map & Command (3/12) ── */}
-            <div className="col-span-3 flex flex-col gap-4 min-h-0 h-full">
-              <div className="flex-1 min-h-0">
-                <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone}/>
+          {/* ── LEFT COLUMN ── */}
+          {leftCollapsed ? (
+            <div className="flex-shrink-0 flex flex-col items-center border-r cursor-pointer hover:bg-white/5 transition-colors"
+              style={{ width: '36px', borderColor: 'var(--t-border)' }}
+              onClick={() => setLeftCollapsed(false)}>
+              <div className="py-3"><PanelRightOpen size={14} style={{ color: 'var(--t-muted)' }} /></div>
+              <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--t-muted)', writingMode: 'vertical-rl' }}>City Grid</span>
+            </div>
+          ) : (<>
+          <div className="flex-shrink-0 flex flex-col border-r scroll-y" style={{ width: `${leftW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
+            {/* City Grid */}
+            <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
+
+            {/* Command Center */}
+            <div className="flex-1 border-t" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="tac-panel-header">
+                <span>Command Center</span>
+                <button onClick={() => setLeftCollapsed(true)} className="p-0.5 hover:bg-white/10 transition-colors" title="Collapse panel">
+                  <PanelLeftClose size={12} style={{ color: 'var(--t-muted)' }} />
+                </button>
               </div>
 
-              <div className="card p-5 bg-navy text-white border-none">
-                <h3 className="text-xs font-black uppercase tracking-widest opacity-60 mb-4 flex items-center gap-2">
-                  <Database size={14} /> Command Controls
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="px-4 py-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Simulation Day</span>
+                  <span className="text-xl font-black font-mono" style={{ color: 'var(--t-text)' }}>{dayStr}</span>
+                </div>
+
+                <div className="flex gap-2">
                   {!isRunning || isPaused ? (
-                    <button onClick={play} disabled={isDebating} className="btn btn-orange w-full">
-                      <Play size={18} fill="white" /> {simState.day === 0 ? 'Launch' : 'Resume'}
+                    <button onClick={play} disabled={isDebating} className="tac-btn-primary flex-1 flex items-center justify-center gap-2">
+                      <Play size={12} fill="currentColor" /> Launch
                     </button>
                   ) : (
-                    <button onClick={pause} className="btn btn-outline border-white text-white hover:bg-white/10 w-full">
-                      <Pause size={18} fill="white" /> Pause
+                    <button onClick={pause} className="tac-btn flex-1 flex items-center justify-center gap-2" style={{ borderColor: 'var(--t-accent)', color: 'var(--t-accent)' }}>
+                      <Pause size={12} /> Pause
                     </button>
                   )}
-                  <button onClick={handleAdvance} disabled={isDebating || !isRunning} className="btn btn-outline border-white/20 text-white hover:bg-white/10 w-full text-xs">
-                    <FastForward size={14} /> Next Phase
-                  </button>
+                  <button onClick={reset} className="tac-btn px-3"><RotateCcw size={12} /></button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <button onClick={() => setShowCrisis(!showCrisis)} className="btn btn-outline border-orange text-orange hover:bg-orange/10 w-full text-xs">
-                    <Zap size={14} /> Events
-                  </button>
-                  <button onClick={reset} className="btn btn-outline border-white/10 text-white/40 hover:bg-white/5 w-full text-xs">
-                    <RotateCcw size={14} /> Reset
-                  </button>
-                </div>
+                <button onClick={handleAdvance} disabled={isDebating || !isRunning || demoMode}
+                  className="tac-btn-danger w-full flex items-center justify-center gap-2">
+                  <FastForward size={12} /> Advance 5 Days + Council Debate
+                </button>
 
+                {/* Demo Mode */}
+                {!demoMode ? (
+                  <button onClick={startDemo} disabled={isDebating}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase font-mono transition-all"
+                    style={{ letterSpacing: '0.12em', border: '1px solid #8b5cf6', color: '#8b5cf6', background: 'transparent' }}
+                    onMouseEnter={e => { e.target.style.background = '#8b5cf6'; e.target.style.color = '#fff'; }}
+                    onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = '#8b5cf6'; }}>
+                    <Radio size={12} /> Demo Mode — Auto Pilot
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <button onClick={stopDemo}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase font-mono"
+                      style={{ letterSpacing: '0.12em', border: '1px solid #ef4444', color: '#fff', background: '#ef4444' }}>
+                      <Pause size={12} /> Stop Demo
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-2 border" style={{ borderColor: '#8b5cf6', background: 'rgba(139,92,246,0.06)' }}>
+                      <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#8b5cf6' }} />
+                      <span className="text-[9px] font-mono uppercase tracking-[0.1em]" style={{ color: '#8b5cf6' }}>
+                        {demoStep || 'Demo active...'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Crisis injection */}
+                <button onClick={() => setShowCrisis(!showCrisis)} className="tac-btn w-full flex items-center justify-between">
+                  <span className="flex items-center gap-2"><Zap size={12} /> Inject Crisis Event</span>
+                  <ChevronDown size={12} className={`transition-transform ${showCrisis ? 'rotate-180' : ''}`} />
+                </button>
                 <AnimatePresence>
                   {showCrisis && (
-                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="flex flex-col gap-1 overflow-hidden pb-4">
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-1">
                       {CRISIS_EVENTS.map(e => (
-                        <button key={e.id} onClick={() => { crisis(e); setShowCrisis(false); }} className="p-2 text-xs font-bold hover:bg-white/10 rounded transition-colors text-left flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-orange" /> {e.name}
+                        <button key={e.id} onClick={() => { crisis(e); setShowCrisis(false); }}
+                          className="w-full text-left px-3 py-2 border transition-all hover:border-red-500/50"
+                          style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
+                          <div className="text-xs font-bold" style={{ color: 'var(--t-text)' }}>{e.name}</div>
+                          <div className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>{e.description}</div>
                         </button>
                       ))}
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                <div className="relative group">
-                  <input value={advisoryText} onChange={e => setAdvisoryText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && advisoryText.trim()) { advisory(advisoryText.trim()); setAdvisoryText(''); } }}
-                    placeholder="Enter directive..." disabled={isDebating}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-orange transition-all pr-12" />
-                  <button onClick={() => { if (advisoryText.trim()) { advisory(advisoryText.trim()); setAdvisoryText(''); } }} disabled={!advisoryText.trim() || isDebating}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-orange hover:scale-110 disabled:opacity-0 transition-all">
-                    <Send size={18} />
-                  </button>
-                </div>
               </div>
-            </div>
-
-            {/* ── CENTER: Agent Hub (5/12) ── */}
-            <div className="col-span-5 flex flex-col min-h-0 h-full">
-              <AgentPanel agentMessages={agentMessages} isDebating={isDebating} userAdvisory={latestAdvisory}/>
-            </div>
-
-            {/* ── RIGHT: Intelligence (4/12) ── */}
-            <div className="col-span-4 flex flex-col gap-4 min-h-0 h-full">
-              <div className="flex items-center justify-between flex-shrink-0">
-                <h2 className="text-sm font-black uppercase tracking-widest text-navy flex items-center gap-2">
-                  <Activity size={16} /> Live Intelligence
-                </h2>
-                <button onClick={() => setShowDecisions(!showDecisions)} className="btn btn-outline py-1.5 px-4 text-xs">
-                  {showDecisions ? 'Dashboard' : `Audit Logs (${debates.length})`}
-                </button>
-              </div>
-
-              {showDecisions ? (
-                <div className="flex-1 min-h-0">
-                  <DecisionLog debates={debates}/>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col gap-4 min-h-0">
-                  {/* KPI Grid */}
-                  <div className="grid grid-cols-2 gap-4 flex-shrink-0">
-                    <div className="card p-4 border-l-4 border-danger">
-                      <p className="text-[10px] font-black uppercase text-muted tracking-widest mb-1">Infected</p>
-                      <h4 className="text-3xl font-black text-danger">{animInf.toLocaleString()}</h4>
-                      <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-muted">
-                        <TrendingUp size={10} /> Active Cases
-                      </div>
-                    </div>
-                    <div className="card p-4 border-l-4 border-safe">
-                      <p className="text-[10px] font-black uppercase text-muted tracking-widest mb-1">Recovered</p>
-                      <h4 className="text-3xl font-black text-safe">{animRec.toLocaleString()}</h4>
-                      <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-muted">
-                        <Heart size={10} /> Survival Rate
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stability Progress Bars */}
-                  <div className="card p-5 space-y-5">
-                    <div>
-                      <div className="flex justify-between items-end mb-2">
-                        <p className="text-[10px] font-black uppercase text-navy tracking-widest">Economic Stability</p>
-                        <span className="text-lg font-black text-navy">{Math.round(cs.economyIndex)}%</span>
-                      </div>
-                      <div className="h-3 w-full bg-main rounded-full overflow-hidden border border-border-color">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${cs.economyIndex}%` }} className="h-full bg-info" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-end mb-2">
-                        <p className="text-[10px] font-black uppercase text-navy tracking-widest">Public Confidence</p>
-                        <span className="text-lg font-black text-navy">{Math.round(cs.publicMorale)}%</span>
-                      </div>
-                      <div className="h-3 w-full bg-main rounded-full overflow-hidden border border-border-color">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${cs.publicMorale}%` }} className="h-full bg-safe" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Chart */}
-                  <div className="card flex-1 p-5 min-h-0 flex flex-col">
-                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                      <h3 className="text-xs font-black uppercase tracking-widest text-muted">Transmission History</h3>
-                    </div>
-                    <div className="flex-1 min-h-0">
-                      {history.length > 2 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={history.slice(-60)}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                            <XAxis dataKey="day" hide />
-                            <YAxis width={40} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                            <Tooltip content={<ChartTooltip />} />
-                            <Area type="monotone" dataKey="infected" stroke="var(--color-danger)" fill="var(--color-danger)" fillOpacity={0.1} strokeWidth={3} />
-                            <Area type="monotone" dataKey="recovered" stroke="var(--color-safe)" fill="var(--color-safe)" fillOpacity={0.1} strokeWidth={3} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center bg-main rounded-lg border-2 border-dashed border-border-color">
-                          <p className="text-xs font-bold text-muted">Awaiting stream data...</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      </main>
+          </>)}
 
-      <footer className="footer-bar">
+          {/* ── LEFT RESIZE HANDLE ── */}
+          {!leftCollapsed && (
+          <div className="resize-handle" onMouseDown={e => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startW = leftW;
+            const onMove = ev => setLeftW(Math.max(280, Math.min(500, startW + ev.clientX - startX)));
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }} />
+          )}
+
+          {/* ── CENTER: Agent Council ── */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <AgentPanel
+              agentMessages={agentMessages}
+              isDebating={isDebating}
+              userAdvisory={latestAdvisory}
+              advisoryText={advisoryText}
+              setAdvisoryText={setAdvisoryText}
+              onAdvisory={(t) => { advisory(t); setAdvisoryText(''); }}
+              suggestions={suggestions}
+              showSuggestions={showSuggestions}
+              setShowSuggestions={setShowSuggestions}
+            />
+          </div>
+
+          {/* ── RIGHT RESIZE HANDLE ── */}
+          {!rightCollapsed && (
+          <div className="resize-handle" onMouseDown={e => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startW = rightW;
+            const onMove = ev => setRightW(Math.max(280, Math.min(500, startW - (ev.clientX - startX))));
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }} />
+          )}
+
+          {/* ── RIGHT: Live Intelligence ── */}
+          {rightCollapsed ? (
+            <div className="flex-shrink-0 flex flex-col items-center border-l cursor-pointer hover:bg-white/5 transition-colors"
+              style={{ width: '36px', borderColor: 'var(--t-border)' }}
+              onClick={() => setRightCollapsed(false)}>
+              <div className="py-3"><PanelLeftOpen size={14} style={{ color: 'var(--t-muted)' }} /></div>
+              <span className="text-[8px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--t-muted)', writingMode: 'vertical-rl' }}>Intelligence</span>
+            </div>
+          ) : (<>
+          <div className="flex-shrink-0 flex flex-col border-l scroll-y" style={{ width: `${rightW}px`, minWidth: '280px', maxWidth: '500px', borderColor: 'var(--t-border)' }}>
+            <div className="tac-panel-header">
+              <span className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Live Intelligence
+              </span>
+              <div className="flex items-center gap-2">
+                <Activity size={14} style={{ color: 'var(--t-muted)' }} />
+                <button onClick={() => setRightCollapsed(true)} className="p-0.5 hover:bg-white/10 transition-colors" title="Collapse panel">
+                  <PanelRightClose size={12} style={{ color: 'var(--t-muted)' }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Metric Boxes (Premium Parth Grid) */}
+            <div className="grid grid-cols-2 border-b" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="p-4 border-r border-b" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Infected</p>
+                <h4 className="text-2xl font-black text-red-500">{animInf.toLocaleString()}</h4>
+              </div>
+              <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Recovered</p>
+                <h4 className="text-2xl font-black text-green-500">{animRec.toLocaleString()}</h4>
+              </div>
+              <div className="p-4 border-r" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Casualties</p>
+                <h4 className="text-2xl font-black" style={{ color: 'var(--t-text)' }}>{animDec.toLocaleString()}</h4>
+              </div>
+              <div className="p-4">
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Hospital Load</p>
+                <h4 className="text-2xl font-black text-blue-500">{Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)}%</h4>
+              </div>
+            </div>
+
+            {/* Stability Progress (Premium Parth Bars) */}
+            <div className="px-5 py-5 space-y-5 border-b" style={{ borderColor: 'var(--t-border)' }}>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Economic Stability</p>
+                  <span className="text-sm font-black" style={{ color: 'var(--t-text)' }}>{Math.round(cs.economyIndex)}%</span>
+                </div>
+                <div className="h-2 w-full bg-main rounded-full overflow-hidden border" style={{ borderColor: 'var(--t-border)' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${cs.economyIndex}%` }} className="h-full bg-blue-500" />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Public Confidence</p>
+                  <span className="text-sm font-black" style={{ color: 'var(--t-text)' }}>{Math.round(cs.publicMorale)}%</span>
+                </div>
+                <div className="h-2 w-full bg-main rounded-full overflow-hidden border" style={{ borderColor: 'var(--t-border)' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${cs.publicMorale}%` }} className="h-full bg-green-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Infection Curve (Premium Chart) */}
+            <div className="px-5 py-5 flex-1 min-h-[250px] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted">Transmission History</h3>
+              </div>
+              <div className="flex-1 min-h-0">
+                {history.length > 2 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={history.slice(-60)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#222' : '#E2E8F0'} />
+                      <XAxis dataKey="day" hide />
+                      <YAxis width={30} tick={{ fontSize: 9, fontWeight: 700, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<div className="bg-panel border p-2 text-[10px] font-mono shadow-xl rounded-lg" style={{ borderColor: 'var(--t-border)' }}>Day {history[history.length-1]?.day} data</div>} />
+                      <Area type="monotone" dataKey="infected" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} strokeWidth={2} />
+                      <Area type="monotone" dataKey="recovered" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl" style={{ borderColor: 'var(--t-border)' }}>
+                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Awaiting stream data...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          </>)}
+        </main>
+      ) : (
+        <main className="flex-1 overflow-hidden p-6">
+          <DecisionLog debates={debates} />
+        </main>
+      )}
+
+      {/* ═══ FOOTER ═══ */}
+      <footer className="h-8 flex-shrink-0 flex items-center justify-between px-6 border-t font-mono text-[9px] uppercase tracking-[0.2em]" style={{ background: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-muted)' }}>
         <div className="flex items-center gap-6">
-          <span>Simulation Engine: SimulCrisis_v3_SIR</span>
-          <span className="opacity-40">|</span>
-          <span className="flex items-center gap-1"><Users size={10} /> Population: 1,200,000</span>
+          <span className="flex items-center gap-1.5"><Brain size={10} /> Engine: SimulCrisis_v3_SIR</span>
+          <span className="opacity-30">|</span>
+          <span className="flex items-center gap-1.5"><Users size={10} /> Population: 1,200,000</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 text-safe">
-            <div className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse" />
+          <div className="flex items-center gap-1.5 text-green-500 font-bold">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             LIVE LINK SECURED
           </div>
         </div>
       </footer>
     </div>
   );
+}ata={history.slice(-50)} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                      <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2, fill: '#f59e0b' }} />
+                      <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={1.5} dot={{ r: 2, fill: '#8b5cf6' }} />
+                      <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
+                      <Tooltip content={<TacTooltip />} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: '#3a3a3a' }}>Awaiting data</div>
+                )}
+              </div>
+            </div>
+
+            {/* Zone Summary */}
+            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: 'var(--t-border)' }}>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Zones affected: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.activeZones}/36</span></span>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Under lockdown: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.lockdownZones}</span></span>
+            </div>
+          </div>
+          </>)}
+
+          {/* ── ZONE DETAIL OVERLAY ── */}
+          <AnimatePresence>
+            {selectedZone && (
+              <ZoneDetail
+                zone={simState.zones.find(z => z.id === selectedZone.id) || selectedZone}
+                onClose={() => setSelectedZone(null)}
+                onAction={(action) => {
+                  setSimState(prev => applyDecision(prev, action));
+                  setSelectedZone(null);
+                }}
+              />
+            )}
+          </AnimatePresence>
+        </main>
+      ) : (
+        <main className="flex-1 min-h-0 overflow-y-auto scroll-y p-6">
+          <DecisionLog debates={debates} />
+        </main>
+      )}
+
+      {/* ═══ FOOTER ═══ */}
+      <footer className="h-[32px] flex-shrink-0 flex items-center justify-between px-5 border-t text-[9px] font-mono uppercase tracking-[0.15em]"
+        style={{ borderColor: 'var(--t-border)', color: 'var(--t-dim)' }}>
+        <span>SIR Model v2.0 · Grid: 6×6 (36 Zones) · Pop: 1,200,000</span>
+        <span>Agents: 4 Active · Decisions: {debates.length} · TechFusion 2.0 — Intelligent Systems</span>
+      </footer>
+    </div>
+  );
 }
 
-function ChartTooltip({ active, payload }) {
+
+
+
+
+function TacTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card p-3 shadow-xl border-navy/10 text-xs">
-      <p className="font-black mb-2 text-navy">METRIC READOUT: DAY {payload[0].payload.day}</p>
+    <div className="border px-3 py-2 text-[10px] font-mono shadow-xl rounded-lg" style={{ background: 'var(--t-panel)', borderColor: 'var(--t-border)' }}>
       {payload.map((p, i) => (
-        <div key={i} className="flex justify-between gap-4 font-bold py-1 border-t border-border-color first:border-none">
-          <span style={{ color: p.stroke }} className="uppercase text-[10px] tracking-wider">{p.dataKey}</span>
-          <span className="text-navy">{p.value?.toLocaleString()}</span>
-        </div>
+        <div key={i} className="font-bold" style={{ color: p.color }}>{p.dataKey}: {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</div>
       ))}
     </div>
   );

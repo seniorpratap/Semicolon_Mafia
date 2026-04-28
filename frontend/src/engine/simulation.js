@@ -172,7 +172,7 @@ export function advanceDay(state) {
   const overwhelmed = newZones.filter(z => z.hospitalCapacity > 0 && z.hospitalOccupancy > z.hospitalCapacity).length;
   const overflowPenalty = overwhelmed * 0.5;
 
-  newState.economyIndex = Math.max(0, Math.min(100,
+  newState.economyIndex = Math.max(-50, Math.min(100,
     state.economyIndex - economyDrop - infectionPenalty - overflowPenalty
     + 0.1  // tiny natural recovery
   ));
@@ -185,7 +185,7 @@ export function advanceDay(state) {
   const infectionFear = (totalInfected / totalPop) * 8;
   const naturalRecovery = lockdownZones === 0 && totalInfected < 500 ? 0.2 : 0;
 
-  newState.publicMorale = Math.max(0, Math.min(100,
+  newState.publicMorale = Math.max(-50, Math.min(100,
     state.publicMorale - deathShock - lockdownFatigue - infectionFear + naturalRecovery
   ));
 

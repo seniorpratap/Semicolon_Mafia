@@ -96,11 +96,11 @@ export default function App() {
       const actions = parseDecisionAction(debate.coordinator, simState.zones);
       let ns = simState;
       actions.forEach(a => { ns = applyDecision(ns, a); });
-      setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setLatestAdvisory('');
+      setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setIsPaused(false); setLatestAdvisory('');
       setExecutedActions(actions);
     } catch (err) {
       if (!abortController.signal.aborted) console.error('[Debate]', err);
-      setIsDebating(false);
+      setIsDebating(false); setIsPaused(false);
     } finally {
       debateAbortRef.current = null;
     }

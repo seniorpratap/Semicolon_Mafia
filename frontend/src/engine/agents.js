@@ -408,6 +408,26 @@ export function parseDecisionAction(coordinatorResponse, zones = []) {
     });
   }
 
+  if (text.includes('lift lockdown') || text.includes('ease restriction') || text.includes('unlock') || text.includes('reopen') || text.includes('end lockdown') || text.includes('remove lockdown')) {
+    const zoneIds = extractZoneIds();
+    const targets = zoneIds.length > 0 ? zoneIds : zones.filter(z => z.lockdownLevel > 0).map(z => z.id);
+    if (targets.length > 0) {
+      actions.push({ action: 'lift_lockdown', targetZones: targets,
+        summary: `Lockdown lifted in ${zoneLabel(targets)}`,
+        detail: 'Restrictions eased. Monitoring continues with enhanced surveillance.'
+      });
+    }
+  }
+
+  if (text.includes('deploy military') || text.includes('military deploy') || text.includes('army') || text.includes('national guard') || text.includes('military-assisted')) {
+    const zoneIds = extractZoneIds();
+    const targets = zoneIds.length > 0 ? zoneIds : zones.filter(z => z.infected > 100).slice(0, 3).map(z => z.id);
+    actions.push({ action: 'deploy_military', targetZones: targets,
+      summary: `Military deployed to ${zoneLabel(targets)}`,
+      detail: 'Armed forces assisting with enforcement, logistics and supply distribution.'
+    });
+  }
+
   // If coordinator made a decision but we couldn't parse specific actions, add a generic
   if (actions.length === 0 && text.includes('decision')) {
     actions.push({ action: 'monitoring',

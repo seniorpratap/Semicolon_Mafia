@@ -38,21 +38,36 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
                 key={zone.id}
                 onClick={() => onZoneClick?.(zone)}
                 className={`grid-cell relative px-1.5 py-2 text-left transition-all cursor-pointer ${getCellClass(zone)}`}
-                style={isSelected ? {
-                  boxShadow: 'inset 0 0 0 2px var(--t-accent)',
-                  background: 'var(--t-hover)',
-                } : {}}
+                style={{
+                  ...(isSelected ? {
+                    boxShadow: 'inset 0 0 0 2px var(--t-accent)',
+                    background: 'var(--t-hover)',
+                  } : {}),
+                  ...(zone.lockdownLevel === 2 ? {
+                    boxShadow: `inset 0 0 0 2px #ef4444, 0 0 8px rgba(239,68,68,0.3)`,
+                    background: 'rgba(239,68,68,0.08)',
+                  } : zone.lockdownLevel === 1 ? {
+                    boxShadow: `inset 0 0 0 2px #f59e0b`,
+                    background: 'rgba(245,158,11,0.06)',
+                  } : {}),
+                }}
               >
-                {/* Zone Name + Icons */}
+                {/* Zone Name + Status Icons */}
                 <div className="flex items-center gap-1">
                   <span className="text-[9px] font-mono font-bold truncate leading-none" style={{ color: 'var(--t-text)', opacity: 0.8 }}>
                     {zone.name.length > 8 ? zone.name.substring(0, 7) + '…' : zone.name}
                   </span>
                   {zone.lockdownLevel > 0 && (
-                    <span className="text-[8px] opacity-50">🔒</span>
+                    <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{
+                      background: zone.lockdownLevel === 2 ? '#ef4444' : '#f59e0b',
+                      color: '#fff',
+                      lineHeight: '14px',
+                    }}>
+                      🔒{zone.lockdownLevel === 2 ? 'F' : 'P'}
+                    </span>
                   )}
-                  {zone.hospitalCapacity > 0 && (
-                    <span className="text-[8px] opacity-30">🏥</span>
+                  {zone.vaccinationRate > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8b5cf6' }} title={`Vaccinated: ${(zone.vaccinationRate * 100).toFixed(0)}%`} />
                   )}
                 </div>
 
@@ -60,6 +75,11 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
                 <div className="text-[11px] font-mono font-bold mt-0.5 leading-none" style={{ color: 'var(--t-text)' }}>
                   {zone.infected > 0 ? zone.infected.toLocaleString() : '0'}
                 </div>
+
+                {/* Military deployed indicator */}
+                {zone.militaryDeployed && (
+                  <div className="absolute top-0.5 right-0.5 text-[8px]" title="Military Deployed">🛡️</div>
+                )}
               </button>
             );
           })}
@@ -80,8 +100,16 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
           </div>
         ))}
         <div className="flex items-center gap-1 ml-auto">
-          <span className="text-[8px] opacity-50">🔒</span>
-          <span className="text-[9px] font-mono font-bold tracking-[0.1em]" style={{ color: 'var(--t-muted)' }}>LCK</span>
+          <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{ background: '#ef4444', color: '#fff', lineHeight: '14px' }}>🔒F</span>
+          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>FULL</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[7px] font-mono font-black px-1 rounded-sm" style={{ background: '#f59e0b', color: '#fff', lineHeight: '14px' }}>🔒P</span>
+          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>PART</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8b5cf6' }} />
+          <span className="text-[9px] font-mono font-bold" style={{ color: 'var(--t-muted)' }}>VAX</span>
         </div>
       </div>
     </div>

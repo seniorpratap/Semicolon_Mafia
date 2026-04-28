@@ -28,6 +28,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [latestAdvisory, setLatestAdvisory] = useState('');
   const [crisisAlert, setCrisisAlert] = useState(null);
+  const [executedActions, setExecutedActions] = useState([]);
   const [advisoryText, setAdvisoryText] = useState('');
   const [showCrisis, setShowCrisis] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -60,7 +61,7 @@ export default function App() {
   }, [isRunning, isPaused, isDebating, tick]);
 
   const triggerDebate = useCallback(async (adv = '') => {
-    setIsDebating(true); setIsPaused(true); setAgentMessages([]);
+    setIsDebating(true); setIsPaused(true); setAgentMessages([]); setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
     const s = getStats(simState);
     const rd = debates.slice(-3).map(d => ({ day: d.day, summary: d.coordinator?.substring(0, 100) || '' }));
@@ -78,6 +79,7 @@ export default function App() {
     let ns = simState;
     actions.forEach(a => { ns = applyDecision(ns, a); });
     setSimState(ns); setDebates(p => [...p, debate]); setIsDebating(false); setLatestAdvisory('');
+    setExecutedActions(actions);
   }, [simState, debates, latestAdvisory]);
 
   const handleAdvance = useCallback(async () => {
@@ -146,6 +148,7 @@ export default function App() {
       setSimState(prev => { let ns = prev; actions1.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
       setDebates(p => [...p, debate1]);
       setIsDebating(false);
+      setExecutedActions(actions1);
       await sleep(3000);
       if (!demoRef.current) return;
 
@@ -205,6 +208,7 @@ export default function App() {
         setSimState(prev => { let ns = prev; actions.forEach(a => { ns = applyDecision(ns, a); }); return ns; });
         setDebates(p => [...p, debate]);
         setIsDebating(false);
+        setExecutedActions(actions);
 
         setDemoStep(`Cycle ${cycleCount} complete. Next in 4s...`);
         await sleep(4000);
@@ -426,6 +430,7 @@ export default function App() {
             <AgentPanel
               agentMessages={agentMessages}
               isDebating={isDebating}
+              executedActions={executedActions}
               userAdvisory={latestAdvisory}
               advisoryText={advisoryText}
               setAdvisoryText={setAdvisoryText}

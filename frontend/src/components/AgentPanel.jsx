@@ -1,6 +1,15 @@
 import { useRef, useEffect, useState } from 'react';
-import { Brain } from 'lucide-react';
+import { Brain, Shield, Syringe, Building2, Search, Lock, AlertTriangle } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
+
+const ACTION_META = {
+  lockdown: { icon: '🔒', label: 'FULL LOCKDOWN', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  partial_lockdown: { icon: '🔶', label: 'PARTIAL LOCKDOWN', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' },
+  vaccinate: { icon: '💉', label: 'VACCINATION DRIVE', color: '#10b981', bg: 'rgba(16,185,129,0.10)' },
+  expand_hospital: { icon: '🏥', label: 'HOSPITAL EXPANSION', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)' },
+  testing: { icon: '🔬', label: 'MASS TESTING', color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)' },
+  deploy_military: { icon: '🛡️', label: 'MILITARY DEPLOYED', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+};
 
 function DotsLoader({ color }) {
   return (
@@ -13,10 +22,6 @@ function DotsLoader({ color }) {
   );
 }
 
-/**
- * StreamingText — renders text with a fade-in on the latest chunk.
- * Tracks previous text length to know what's "new".
- */
 function StreamingText({ text, color }) {
   const prevLen = useRef(0);
   const [oldText, setOldText] = useState('');
@@ -36,10 +41,7 @@ function StreamingText({ text, color }) {
   return (
     <div className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color }}>
       {oldText}
-      {newText && (
-        <span className="stream-fade-in">{newText}</span>
-      )}
-      {/* Blinking cursor while streaming */}
+      {newText && <span className="stream-fade-in">{newText}</span>}
       <span className="cursor-blink" />
     </div>
   );
@@ -68,7 +70,6 @@ function AgentMessage({ agentId, message, isStreaming }) {
           opacity: isThinking ? 0.5 : 1
         }} />
       </div>
-
       {isThinking ? (
         <DotsLoader color={agent?.color || 'var(--t-muted)'} />
       ) : isStreaming ? (
@@ -82,7 +83,48 @@ function AgentMessage({ agentId, message, isStreaming }) {
   );
 }
 
-export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
+/**
+ * ExecutedActions — prominent banner showing what the coordinator decided to do
+ */
+function ExecutedActions({ actions }) {
+  if (!actions || actions.length === 0) return null;
+
+  return (
+    <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <AlertTriangle size={14} className="text-green-500" />
+        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-green-500">
+          Actions Executed
+        </span>
+        <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
+      </div>
+      <div className="space-y-2">
+        {actions.map((action, i) => {
+          const meta = ACTION_META[action.action] || { icon: '⚡', label: action.action.toUpperCase(), color: 'var(--t-muted)', bg: 'var(--t-hover)' };
+          return (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border"
+              style={{ borderColor: meta.color, background: meta.bg, borderLeftWidth: '3px' }}>
+              <span className="text-lg">{meta.icon}</span>
+              <div className="flex-1">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: meta.color }}>
+                  {meta.label}
+                </div>
+                <div className="text-[11px] font-mono" style={{ color: 'var(--t-text2)' }}>
+                  {action.summary}
+                </div>
+              </div>
+              <span className="text-[9px] font-mono px-2 py-0.5 border" style={{ borderColor: meta.color, color: meta.color }}>
+                APPLIED
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function AgentPanel({ agentMessages, isDebating, executedActions, userAdvisory,
   advisoryText, setAdvisoryText, onAdvisory, suggestions, showSuggestions, setShowSuggestions }) {
   return (
     <div className="flex flex-col h-full">
@@ -108,7 +150,7 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
         </div>
       )}
 
-      {/* Messages — each agent appears only once */}
+      {/* Messages + Actions */}
       <div className="flex-1 overflow-y-auto scroll-y">
         {agentMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
@@ -120,9 +162,8 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
               Advance the simulation or inject a crisis to trigger the agent council debate.
             </span>
           </div>
-        ) : (
-          agentMessages.map((msg, idx) => {
-            // Last message from this agent + still debating = streaming
+        ) : (<>
+          {agentMessages.map((msg, idx) => {
             const isLast = idx === agentMessages.length - 1;
             const streaming = isDebating && isLast && msg.text !== 'thinking';
             return (
@@ -133,8 +174,10 @@ export default function AgentPanel({ agentMessages, isDebating, userAdvisory,
                 isStreaming={streaming}
               />
             );
-          })
-        )}
+          })}
+          {/* Show executed actions AFTER all agent messages */}
+          <ExecutedActions actions={executedActions} />
+        </>)}
       </div>
 
       {/* Advisory Input */}

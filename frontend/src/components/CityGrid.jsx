@@ -1,39 +1,44 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimatedNumber } from '../hooks/useEffects';
-import { MapPin, Lock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { MapPin, Lock, AlertTriangle, ShieldCheck, Activity } from 'lucide-react';
 
 export default function CityGrid({ zones, onZoneClick, selectedZone }) {
   const totalInfected = zones.reduce((s, z) => s + z.infected, 0);
-  const animInfected = useAnimatedNumber(totalInfected);
 
   const getStatus = (zone) => {
     const rate = zone.infected / zone.population;
-    if (rate > 0.15) return { level: 'Critical', bg: 'var(--color-danger)', border: '#C92A38', text: '#FFFFFF', icon: <AlertTriangle size={12}/> };
-    if (rate > 0.08) return { level: 'Warning', bg: 'var(--color-orange)', border: '#E85B2A', text: '#FFFFFF', icon: <AlertTriangle size={12}/> };
-    if (rate > 0.03) return { level: 'Elevated', bg: '#F6AD55', border: '#DD6B20', text: '#FFFFFF', icon: null };
+    if (rate > 0.15) return { level: 'Critical', bg: 'var(--color-danger)', border: '#C92A38', text: '#FFFFFF', icon: <AlertTriangle size={14}/> };
+    if (rate > 0.08) return { level: 'Warning', bg: 'var(--color-orange)', border: '#E85B2A', text: '#FFFFFF', icon: <AlertTriangle size={14}/> };
+    if (rate > 0.03) return { level: 'Elevated', bg: '#FF9F1C', border: '#E68A00', text: '#FFFFFF', icon: null };
     if (rate > 0.005 || zone.infected > 0) return { level: 'Tracked', bg: 'var(--color-info)', border: '#3148C9', text: '#FFFFFF', icon: null };
-    return { level: 'Safe', bg: 'var(--bg-main)', border: 'var(--border-color)', text: 'var(--color-navy)', icon: <ShieldCheck size={12} className="text-safe"/> };
+    return { level: 'Safe', bg: 'var(--bg-surface)', border: 'var(--border-color)', text: 'var(--color-navy)', icon: <ShieldCheck size={14} className="text-safe"/> };
   };
 
   return (
-    <div className="card p-3 flex flex-col gap-3 relative h-full">
+    <div className="card p-5 flex flex-col gap-4 h-full">
       {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-navy bg-opacity-10 flex items-center justify-center text-navy">
-            <MapPin size={16} />
+      <div className="flex items-center justify-between flex-shrink-0 pb-3 border-b border-border-color">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-navy text-white flex items-center justify-center shadow-lg shadow-navy/20">
+            <MapPin size={20} />
           </div>
           <div>
-            <h2 className="text-sm font-bold leading-none">City Sector Map</h2>
-            <p className="text-[10px] text-muted leading-none mt-1">Grid: 36 Sectors</p>
+            <h2 className="text-sm font-black uppercase tracking-widest text-navy">Sector Analytics</h2>
+            <p className="text-[10px] font-bold text-muted uppercase tracking-wider mt-0.5">36 Tactical Units</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <p className="text-[9px] font-black uppercase text-muted tracking-widest">Active Cases</p>
+            <p className="text-base font-black text-danger leading-none">{totalInfected.toLocaleString()}</p>
           </div>
         </div>
       </div>
 
-      {/* Interactive Grid Table */}
-      <div className="flex-1 min-h-0 flex flex-col relative">
-        <div className="grid grid-cols-6 gap-1 h-full w-full">
-          {zones.map((zone, idx) => {
+      {/* Grid Table Format */}
+      <div className="flex-1 min-h-0 relative">
+        <div className="grid grid-cols-6 gap-2 h-full">
+          {zones.map((zone) => {
             const status = getStatus(zone);
             const isSelected = selectedZone?.id === zone.id;
 
@@ -41,53 +46,52 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
               <motion.div
                 key={zone.id}
                 onClick={() => onZoneClick?.(zone)}
-                whileHover={{ scale: 1.05, zIndex: 10 }}
+                whileHover={{ y: -4, scale: 1.02, zIndex: 50 }}
                 whileTap={{ scale: 0.95 }}
-                className={`cursor-pointer rounded-sm border relative flex flex-col items-center justify-center overflow-hidden group transition-shadow ${isSelected ? 'shadow-md ring-2 ring-info' : ''}`}
+                className={`cursor-pointer rounded-lg border-2 relative flex flex-col items-center justify-center overflow-hidden group transition-all duration-200 
+                  ${isSelected ? 'ring-4 ring-orange ring-opacity-20 z-10 shadow-xl' : 'shadow-sm'}`}
                 style={{
                   backgroundColor: status.bg,
-                  borderColor: status.border,
+                  borderColor: isSelected ? 'var(--color-orange)' : status.border,
                   color: status.text,
                 }}
               >
-                {/* Lockdown Pattern */}
+                {/* Lockdown Overlay */}
                 {zone.lockdownLevel > 0 && (
-                  <div className="absolute inset-0 opacity-20 pointer-events-none"
+                  <div className="absolute inset-0 opacity-10 pointer-events-none"
                     style={{
-                      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, #000 4px, #000 8px)'
+                      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, currentColor 5px, currentColor 10px)'
                     }} />
                 )}
 
-                <div className="z-10 flex flex-col items-center w-full px-1">
-                  <span className="text-[10px] font-bold leading-tight truncate text-center w-full">
-                    {zone.name.substring(0,6)}
+                <div className="z-10 flex flex-col items-center w-full px-2 text-center">
+                  <span className="text-[9px] font-black uppercase tracking-tight truncate w-full mb-1">
+                    {zone.name}
                   </span>
                   
                   {zone.infected > 0 ? (
-                    <span className="text-[10px] font-black leading-none mt-1">
-                      {zone.infected > 1000 ? `${(zone.infected / 1000).toFixed(1)}k` : zone.infected}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-black leading-none mb-1">
+                        {zone.infected >= 1000 ? `${(zone.infected / 1000).toFixed(1)}k` : zone.infected}
+                      </span>
+                      {status.icon}
+                    </div>
                   ) : (
-                    <span className="mt-1 opacity-50">{status.icon}</span>
+                    <div className="mt-1 opacity-80">{status.icon}</div>
                   )}
                 </div>
 
                 {zone.lockdownLevel > 0 && (
-                  <div className="absolute top-0.5 right-0.5 z-20 opacity-70">
-                    <Lock size={10} fill="currentColor"/>
-                  </div>
-                )}
-                {zone.infected > 0 && status.icon && (
-                  <div className="absolute top-0.5 left-0.5 z-20 opacity-70">
-                    {status.icon}
+                  <div className="absolute top-1 right-1 z-20">
+                    <Lock size={10} fill="currentColor" />
                   </div>
                 )}
 
-                {/* Accessible Tooltip */}
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30
-                  bg-navy text-white px-2 py-1 rounded shadow-md whitespace-nowrap text-xs font-medium flex items-center gap-1">
-                  <span>{zone.name}</span>
-                  <span className="text-orange border-l border-white border-opacity-20 pl-1">{status.level}</span>
+                {/* Tooltip Overlay (Premium) */}
+                <div className="absolute inset-0 bg-navy opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
+                  <span className="text-[8px] font-black text-orange uppercase mb-1">{zone.name}</span>
+                  <span className="text-[10px] font-bold text-white mb-1">{status.level}</span>
+                  <div className="h-0.5 w-4 bg-orange rounded-full" />
                 </div>
               </motion.div>
             );
@@ -95,54 +99,77 @@ export default function CityGrid({ zones, onZoneClick, selectedZone }) {
         </div>
       </div>
 
-      {/* Selected Zone Detail Overlay (Compact) */}
-      <AnimatePresence>
-      {selectedZone && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border border-info rounded bg-info bg-opacity-5 p-2 flex-shrink-0"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-navy flex items-center gap-1"><MapPin size={12}/> {selectedZone.name}</h3>
-            <span className="text-[10px] bg-main text-muted px-1 rounded border border-border-color">ID: {selectedZone.id}</span>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div className="bg-main rounded border border-border-color p-1">
-              <div className="text-[9px] font-semibold text-muted">Pop</div>
-              <div className="text-xs font-bold">{selectedZone.population >= 1000 ? (selectedZone.population/1000).toFixed(0)+'k' : selectedZone.population}</div>
+      {/* Legend & Active Selection Details */}
+      <div className="flex-shrink-0 flex flex-col gap-3">
+        <div className="flex items-center justify-around p-2 bg-main rounded-lg border border-border-color">
+          {[
+            { l: 'Safe', c: 'var(--bg-surface)' },
+            { l: 'Warning', c: 'var(--color-orange)' },
+            { l: 'Critical', c: 'var(--color-danger)' },
+            { l: 'Tracked', c: 'var(--color-info)' }
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full border border-border-color shadow-sm" style={{ backgroundColor: item.c }} />
+              <span className="text-[9px] font-black uppercase text-muted tracking-wider">{item.l}</span>
             </div>
-            <div className="bg-danger bg-opacity-10 rounded border border-danger p-1">
-              <div className="text-[9px] font-semibold text-danger">Inf</div>
-              <div className="text-xs font-bold text-danger">{selectedZone.infected.toLocaleString()}</div>
-            </div>
-            <div className="bg-safe bg-opacity-10 rounded border border-safe p-1">
-              <div className="text-[9px] font-semibold text-safe">Rec</div>
-              <div className="text-xs font-bold text-safe">{selectedZone.recovered.toLocaleString()}</div>
-            </div>
-            <div className="bg-main rounded border border-border-color p-1">
-              <div className="text-[9px] font-semibold text-muted">Dec</div>
-              <div className="text-xs font-bold text-navy">{selectedZone.deceased.toLocaleString()}</div>
-            </div>
-          </div>
-          
-          {selectedZone.hospitalCapacity > 0 && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="text-[9px] font-semibold text-info">Hosp</div>
-              <div className="flex-1 bg-main rounded-full h-1.5 overflow-hidden border border-border-color">
-                <div className="h-full rounded-full" style={{ 
-                  backgroundColor: selectedZone.hospitalOccupancy > selectedZone.hospitalCapacity ? 'var(--color-danger)' : 'var(--color-safe)',
-                  width: `${Math.min(100, (selectedZone.hospitalOccupancy / selectedZone.hospitalCapacity) * 100)}%` 
-                }}></div>
+          ))}
+        </div>
+
+        {/* Compact Detail View */}
+        <AnimatePresence>
+          {selectedZone && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="bg-navy rounded-xl p-4 shadow-xl border-t-2 border-orange"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Activity size={14} className="text-orange" />
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">{selectedZone.name} Readout</h3>
+                </div>
+                <div className="text-[9px] font-bold text-white/40 uppercase">Sector ID_{selectedZone.id}</div>
               </div>
-              <div className="text-[9px] font-semibold text-muted">{selectedZone.hospitalOccupancy}/{selectedZone.hospitalCapacity}</div>
-            </div>
+              
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-white/5 rounded-lg p-2 border border-white/5">
+                  <p className="text-[8px] font-black text-white/40 uppercase mb-1">Pop</p>
+                  <p className="text-xs font-black text-white">{selectedZone.population >= 1000 ? (selectedZone.population/1000).toFixed(1)+'k' : selectedZone.population}</p>
+                </div>
+                <div className="bg-danger/10 rounded-lg p-2 border border-danger/20">
+                  <p className="text-[8px] font-black text-danger uppercase mb-1">Inf</p>
+                  <p className="text-xs font-black text-danger">{selectedZone.infected}</p>
+                </div>
+                <div className="bg-safe/10 rounded-lg p-2 border border-safe/20">
+                  <p className="text-[8px] font-black text-safe uppercase mb-1">Rec</p>
+                  <p className="text-xs font-black text-safe">{selectedZone.recovered}</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2 border border-white/5">
+                  <p className="text-[8px] font-black text-white/40 uppercase mb-1">Dec</p>
+                  <p className="text-xs font-black text-white">{selectedZone.deceased}</p>
+                </div>
+              </div>
+              
+              {selectedZone.hospitalCapacity > 0 && (
+                <div className="mt-3 flex items-center gap-3">
+                  <Database size={12} className="text-info" />
+                  <div className="flex-1">
+                    <div className="flex justify-between text-[8px] font-black text-white/60 mb-1 uppercase tracking-widest">
+                      <span>Facility Occupancy</span>
+                      <span>{Math.round(selectedZone.hospitalOccupancy/selectedZone.hospitalCapacity*100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (selectedZone.hospitalOccupancy/selectedZone.hospitalCapacity)*100)}%` }} 
+                        className={`h-full ${selectedZone.hospitalOccupancy > selectedZone.hospitalCapacity ? 'bg-danger' : 'bg-info'}`} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
           )}
-        </motion.div>
-      )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

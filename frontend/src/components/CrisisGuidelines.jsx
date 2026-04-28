@@ -202,10 +202,10 @@ export default function CrisisGuidelines() {
       <div className="flex items-center justify-between mb-6 border-b pb-4" style={{ borderColor: 'var(--t-border)' }}>
         <div className="flex items-center gap-3">
           <ShieldAlert size={20} className="text-orange-500" />
-          <h2 className="text-lg font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Crisis Response Protocols</h2>
+          <h2 className="text-lg font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Crisis Management SOPs</h2>
         </div>
         <div className="text-[10px] font-mono font-black uppercase tracking-[0.2em] px-3 py-1 bg-white/5 rounded-full border border-white/10" style={{ color: 'var(--t-muted)' }}>
-          Standard Operating Procedures · {guidelines.length} Scenarios
+          Administrative Protocols · {guidelines.length} Scenarios
         </div>
       </div>
 
@@ -242,7 +242,7 @@ export default function CrisisGuidelines() {
                 {/* DO's */}
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-green-500 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Response Protocol
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Command Directives
                   </div>
                   <ul className="text-[11px] font-mono font-medium leading-relaxed space-y-1.5 list-none m-0 p-0" style={{ color: 'var(--t-text)' }}>
                     {g.dos.map((pt, i) => (
@@ -256,7 +256,7 @@ export default function CrisisGuidelines() {
                 {/* DONT's */}
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-red-500 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Critical Warnings
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Operational Restrictions
                   </div>
                   <ul className="text-[11px] font-mono font-medium leading-relaxed space-y-1.5 list-none m-0 p-0" style={{ color: 'var(--t-text)' }}>
                     {g.donts.map((pt, i) => (

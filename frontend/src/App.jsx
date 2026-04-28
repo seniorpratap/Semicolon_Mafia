@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
-import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { AreaChart, Area, LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, PieChart, Pie, Cell, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
@@ -27,6 +27,7 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [chartMode, setChartMode] = useState(0);
   const [latestAdvisory, setLatestAdvisory] = useState('');
   const [crisisAlert, setCrisisAlert] = useState(null);
   const [executedActions, setExecutedActions] = useState([]);
@@ -51,7 +52,7 @@ export default function App() {
   useEffect(() => {
     if (simState.day > 0) {
       const s = getStats(simState);
-      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased, economy: s.economyIndex, morale: s.publicMorale }]);
+      setHistory(p => [...p, { day: simState.day, infected: s.totalInfected, recovered: s.totalRecovered, deceased: s.totalDeceased, susceptible: s.totalSusceptible, economy: s.economyIndex, morale: s.publicMorale, hospLoad: s.hospitalLoad, hospCap: s.hospitalCapacity, hospPct: Math.round(s.hospitalLoad / Math.max(1, s.hospitalCapacity) * 100), activeZones: s.activeZones, lockdownZones: s.lockdownZones }]);
     }
   }, [simState.day]);
 
@@ -535,56 +536,98 @@ export default function App() {
               <GaugeRow label="Morale" value={Math.round(cs.publicMorale)} color="#8b5cf6" />
             </div>
 
-            {/* Infection Curve */}
-            <div className="border-t px-4 py-3" style={{ borderColor: 'var(--t-border)' }}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Infection Curve</span>
-                <div className="flex gap-3">
-                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#ef4444' }}>■ Infected</span>
-                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#10b981' }}>■ Recovered</span>
-                </div>
-              </div>
-              <div className="h-24">
-                {history.length > 1 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={history.slice(-50)} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                      <defs>
-                        <linearGradient id="gInf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} /><stop offset="95%" stopColor="#ef4444" stopOpacity={0} /></linearGradient>
-                        <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.2} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="infected" stroke="#ef4444" fill="url(#gInf)" strokeWidth={1.5} dot={{ r: 2, fill: '#ef4444' }} />
-                      <Area type="monotone" dataKey="recovered" stroke="#10b981" fill="url(#gRec)" strokeWidth={1.5} dot={{ r: 2, fill: '#10b981' }} />
-                      <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} />
-                      <Tooltip content={<TacTooltip />} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: '#3a3a3a' }}>Awaiting data</div>
-                )}
-              </div>
+            {/* ── CHART SWITCHER ── */}
+            <div className="border-t px-4 py-2 flex items-center gap-1" style={{ borderColor: 'var(--t-border)' }}>
+              {['SIR Curve', 'Stacked Bar', 'Stability', 'Radar', 'Pie'].map((label, i) => (
+                <button key={i} onClick={() => setChartMode(i)}
+                  className="px-2 py-1 text-[8px] font-mono font-bold uppercase tracking-[0.1em] border transition-all"
+                  style={{
+                    borderColor: chartMode === i ? 'var(--t-accent)' : 'var(--t-border)',
+                    color: chartMode === i ? 'var(--t-accent)' : 'var(--t-muted)',
+                    background: chartMode === i ? 'var(--t-input)' : 'transparent'
+                  }}>{label}</button>
+              ))}
             </div>
 
-            {/* Stability Index */}
+            {/* ── CHART AREA ── */}
             <div className="border-t px-4 py-3" style={{ borderColor: 'var(--t-border)' }}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>Stability Index</span>
-                <div className="flex gap-3">
-                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#f59e0b' }}>— Economy</span>
-                  <span className="flex items-center gap-1 text-[9px] font-mono" style={{ color: '#8b5cf6' }}>— Morale</span>
-                </div>
-              </div>
-              <div className="h-20">
+              <div className="h-44">
                 {history.length > 1 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={history.slice(-50)} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                      <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2, fill: '#f59e0b' }} />
-                      <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={1.5} dot={{ r: 2, fill: '#8b5cf6' }} />
-                      <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
-                      <Tooltip content={<TacTooltip />} />
-                    </LineChart>
+                    {chartMode === 0 ? (
+                      /* SIR AREA CHART */
+                      <AreaChart data={history.slice(-60)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <defs>
+                          <linearGradient id="gInf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} /><stop offset="95%" stopColor="#ef4444" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="gDec" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6b7280" stopOpacity={0.3} /><stop offset="95%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
+                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={35} />
+                        <Area type="monotone" dataKey="infected" stroke="#ef4444" fill="url(#gInf)" strokeWidth={1.5} dot={false} name="Infected" />
+                        <Area type="monotone" dataKey="recovered" stroke="#10b981" fill="url(#gRec)" strokeWidth={1.5} dot={false} name="Recovered" />
+                        <Area type="monotone" dataKey="deceased" stroke="#6b7280" fill="url(#gDec)" strokeWidth={1.5} dot={false} name="Deceased" />
+                        <Tooltip content={<TacTooltip />} />
+                      </AreaChart>
+                    ) : chartMode === 1 ? (
+                      /* STACKED BAR — SIR breakdown */
+                      <BarChart data={history.slice(-30)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
+                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={35} />
+                        <Bar dataKey="infected" stackId="a" fill="#ef4444" name="Infected" />
+                        <Bar dataKey="recovered" stackId="a" fill="#10b981" name="Recovered" />
+                        <Bar dataKey="deceased" stackId="a" fill="#6b7280" name="Deceased" />
+                        <Tooltip content={<TacTooltip />} />
+                      </BarChart>
+                    ) : chartMode === 2 ? (
+                      /* STABILITY — Economy + Morale line chart */
+                      <LineChart data={history.slice(-60)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
+                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
+                        <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={2} dot={false} name="Economy" />
+                        <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Morale" />
+                        <Line type="monotone" dataKey="hospPct" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Hospital %" />
+                        <Tooltip content={<TacTooltip />} />
+                      </LineChart>
+                    ) : chartMode === 3 ? (
+                      /* RADAR — current situation snapshot */
+                      <RadarChart outerRadius={60} data={[
+                        { stat: 'Infected', val: Math.min(100, Math.round(cs.totalInfected / 12000 * 100)), full: 100 },
+                        { stat: 'Hospital', val: Math.min(100, Math.round(cs.hospitalLoad / Math.max(1, cs.hospitalCapacity) * 100)), full: 100 },
+                        { stat: 'Deceased', val: Math.min(100, Math.round(cs.totalDeceased / 5000 * 100)), full: 100 },
+                        { stat: 'Economy', val: Math.round(cs.economyIndex), full: 100 },
+                        { stat: 'Morale', val: Math.round(cs.publicMorale), full: 100 },
+                        { stat: 'Zones Hit', val: Math.round(cs.activeZones / 36 * 100), full: 100 },
+                      ]}>
+                        <PolarGrid stroke="var(--t-border)" />
+                        <PolarAngleAxis dataKey="stat" tick={{ fontSize: 8, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar name="Current" dataKey="val" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} strokeWidth={2} />
+                        <Tooltip content={<TacTooltip />} />
+                      </RadarChart>
+                    ) : (
+                      /* PIE — current population distribution */
+                      <PieChart>
+                        <Pie data={[
+                          { name: 'Susceptible', value: cs.totalSusceptible || 1, fill: '#3b82f6' },
+                          { name: 'Infected', value: cs.totalInfected || 0, fill: '#ef4444' },
+                          { name: 'Recovered', value: cs.totalRecovered || 0, fill: '#10b981' },
+                          { name: 'Deceased', value: cs.totalDeceased || 0, fill: '#6b7280' },
+                        ].filter(d => d.value > 0)} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={2} strokeWidth={0}>
+                          {[{ fill: '#3b82f6' }, { fill: '#ef4444' }, { fill: '#10b981' }, { fill: '#6b7280' }].map((entry, i) => (
+                            <Cell key={i} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<TacTooltip />} />
+                        <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', fontFamily: 'JetBrains Mono' }} />
+                      </PieChart>
+                    )}
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: '#3a3a3a' }}>Awaiting data</div>
+                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: 'var(--t-border)' }}>Awaiting data</div>
                 )}
               </div>
             </div>

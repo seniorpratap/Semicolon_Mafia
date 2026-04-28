@@ -144,13 +144,16 @@ function CycleSeparator({ label }) {
 export default function AgentPanel({ agentMessages, isDebating, executedActions, previousMessages,
   userAdvisory, advisoryText, setAdvisoryText, onAdvisory, suggestions, showSuggestions, setShowSuggestions }) {
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll — only if user is already near bottom (not fighting their scroll)
   const scrollRef = useRef(null);
   const [showOldMessages, setShowOldMessages] = useState(false);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }
   }, [agentMessages, executedActions]);
 

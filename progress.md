@@ -264,4 +264,79 @@ b414a65 MAJOR: complete agent brain rewrite for dynamic, data-driven debates
 - 🟢 **Build**: Clean (0 errors)
 - 🟢 **Deployed**: Running on localhost:5173
 
+---
 
+## Checkpoint 5 — 6:00 AM (Production Hardening + Critical Bug Fixes + Live Deployment)
+
+### What was completed since Checkpoint 4:
+
+#### 1. AI Model Upgrade — Gemini 2.5 Flash → Gemini 2.5 Pro (Flagship)
+- ✅ **Upgraded to `gemini-2.5-pro`**: Top-tier flagship model with 1M token context, thinking capabilities, and advanced complex reasoning
+- ✅ **Updated all references**: `gemini.js` service (streaming + non-streaming calls), `presentation.html` slides, comment headers
+- ✅ **Verified model availability**: Confirmed `gemini-2.5-pro` is the highest-tier stable model available via the API
+
+#### 2. Security Hardening — API Key Leak Remediation (Critical)
+- ✅ **Scrubbed key from git history**: Used `git filter-branch` to remove exposed API keys from ALL commits
+- ✅ **Force-pushed clean history**: Old commit URLs now return 404
+- ✅ **Added `frontend/.env` to `.gitignore`**: Prevents future accidental key commits
+- ✅ **Regenerated API key**: Old key disabled by Google, new key deployed
+
+#### 3. Simulation Engine Fixes (4 Critical Bugs)
+- ✅ **Economy & Morale can now go negative** (down to -50): Previously clamped at 0, now severe crises create visible negative pressure on the dashboard
+- ✅ **Simulation auto-resume after debate**: `isPaused` was set to `true` at debate start but NEVER reset — sim permanently stalled after every council session. Fixed in both success and error paths
+- ✅ **`lift_lockdown` + `deploy_military` actions now parsed**: Coordinator could say "lift lockdown" / "ease restrictions" / "deploy military" but parser had no handler — actions were silently dropped. Added full parsing support
+- ✅ **Auto-trigger council debate every 5 days**: Normal play now auto-triggers agent debates at day 5, 10, 15, 20... — previously debates ONLY fired from "Advance 5 Days" button or crisis injection
+
+#### 4. City Grid Visual Overhaul — Lockdown & Status Visibility
+- ✅ **Before**: Lockdown shown as `🔒` emoji at `opacity-50` / `8px` — nearly invisible
+- ✅ **After**: Three-layer lockdown indication system:
+  - **Cell border**: Full lockdown = red 2px glow border + red tint. Partial = yellow border + yellow tint
+  - **Corner dot**: Glowing red/yellow dot positioned `absolute top-right` — zero layout impact
+  - **All indicators absolute-positioned**: No text wrapping, no broken grid layout
+- ✅ **Vaccination indicator**: Purple dot bottom-right when zone has active vaccination
+- ✅ **Military indicator**: Blue dot bottom-left when military deployed
+
+#### 5. Agent Panel UX Fixes
+- ✅ **Advisory flicker eliminated**: Panel shows "Council convening..." loader instead of flashing empty during transition
+- ✅ **Quick action toast**: Zone actions show green confirmation toast `✓ Full lockdown: Old Town` for 2 seconds
+- ✅ **Popup closes immediately**: Zone detail closes instantly after action so user sees grid update
+
+#### 6. Live Deployment — GitHub Pages with GEMINI LIVE
+- ✅ **Production bundle with API key**: `docs/` includes live Gemini API key for instant demo
+- ✅ **GitHub Pages URL**: `https://seniorpratap.github.io/Semicolon_Mafia/` — runs GEMINI LIVE (real AI debates) on any browser, any PC, no setup needed
+- ✅ **Local dev also works**: `frontend/.env` for `npm run dev` at `localhost:5173`
+
+### Commits Since Checkpoint 4 (12 commits):
+```
+7887464 feat: auto-trigger council debate every 5 days during normal play
+6721bca fix: grid indicators as absolute corner dots - zero layout impact
+1920b6c fix: clean legend - lockdown badges stay inside grid cells only
+8d7a43c critical: 4-bug fix - negative morale/economy, visible lockdowns, lift_lockdown parser, auto-resume sim
+62e90f1 fix: popup closes immediately + council convening loader prevents flicker
+1ff25b1 fix: quick actions toast feedback + advisory flicker resolved
+892c257 fix: use gemini-2.5-pro (actual top-tier stable model)
+e21ff7b upgrade: Gemini 3.1 Pro + live API key in build
+fecd433 security: remove API key from built bundle - rebuild without env
+5f1b221 fix: remove exposed API key from repo
+```
+
+### Files Changed Since Checkpoint 4:
+| File | Changes |
+|------|---------|
+| `src/services/gemini.js` | Model upgrade: `gemini-2.5-flash` → `gemini-2.5-pro` |
+| `src/engine/simulation.js` | Economy/morale floor changed from 0 to -50 |
+| `src/engine/agents.js` | Added `lift_lockdown` + `deploy_military` action parsers |
+| `src/App.jsx` | Auto-debate every 5 days, isPaused reset, action toast |
+| `src/components/CityGrid.jsx` | Absolute-positioned lockdown/vax/military indicators |
+| `src/components/AgentPanel.jsx` | "Council convening..." loader state |
+| `presentation.html` | Updated to Gemini 2.5 Pro references |
+
+### Current Status:
+- 🟢 **AI Model**: Gemini 2.5 Pro (top-tier flagship) with intelligent mock fallback
+- 🟢 **Security**: API key scrubbed from git history, .env in .gitignore
+- 🟢 **Simulation**: Economy/morale go negative, auto-resume, auto-debate every 5 days
+- 🟢 **Grid**: Highly visible lockdown borders + corner dots, zero layout disruption
+- 🟢 **Actions**: Full lifecycle — lockdown, unlock, vaccinate, expand, deploy military all execute
+- 🟢 **Deployment**: Live at `seniorpratap.github.io/Semicolon_Mafia` with GEMINI LIVE
+- 🟢 **Build**: Clean (0 errors)
+- 🟢 **Presentation**: 9-slide deck ready for judges

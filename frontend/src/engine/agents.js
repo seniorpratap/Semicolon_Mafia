@@ -2,14 +2,8 @@
  * SimulCrisis — AI Agent System (v2)
  * ====================================
  * 4 AI agents with conflicting priorities debate crisis response.
- * Each agent receives RICH simulation data and MUST reference it.
- * The Coordinator weighs all inputs and makes a final explainable decision.
- *
- * Key improvements over v1:
- * - Agents see zone-by-zone data, trends, and previous decision outcomes
- * - Advisory is MANDATORY to address when provided
- * - Agents reference each other's arguments and disagree
- * - Coordinator produces structured, actionable decisions
+ * Uses Gemini 2.0 Flash directly from the client (no backend needed).
+ * Falls back to intelligent mock responses if API key is not configured.
  */
 
 import { isGeminiReady, generateAgentResponseStreaming } from '../services/gemini';

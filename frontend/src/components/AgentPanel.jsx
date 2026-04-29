@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
-import { Brain, AlertTriangle, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, MessageSquare, Shield, Activity, Zap, Send, ChevronDown } from 'lucide-react';
 import { AGENTS } from '../engine/agents';
 
 const ACTION_META = {
@@ -14,11 +15,11 @@ const ACTION_META = {
 
 function DotsLoader({ color }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 py-1">
       <div className="dots-loader" style={{ color }}>
         <span /><span /><span />
       </div>
-      <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>analyzing</span>
+      <span className="text-[10px] font-mono uppercase tracking-widest opacity-40">Analyzing</span>
     </div>
   );
 }
@@ -40,7 +41,7 @@ function StreamingText({ text, color }) {
   }, [text]);
 
   return (
-    <div className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color }}>
+    <div className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium" style={{ color: 'var(--t-text)' }}>
       {oldText}
       {newText && <span className="stream-fade-in">{newText}</span>}
       <span className="cursor-blink" />
@@ -54,235 +55,156 @@ function AgentMessage({ agentId, message, isStreaming }) {
   const isThinking = message.text === 'thinking';
 
   return (
-    <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border-light)' }}>
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-8 h-8 border flex items-center justify-center text-lg"
-          style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
+    <motion.div 
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="border-l-4 mb-4 p-4 rounded-r-xl transition-all"
+      style={{ 
+        borderColor: agent?.color || 'var(--t-accent)', 
+        background: 'rgba(255,255,255,0.02)',
+        borderWidth: '0 0 0 4px'
+      }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-9 h-9 border flex items-center justify-center text-xl rounded-lg shadow-sm"
+          style={{ borderColor: 'var(--t-border)', background: 'var(--t-bg)' }}>
           {agent?.emoji || '🤖'}
         </div>
         <div className="flex-1">
-          <div className="text-xs font-bold" style={{ color: 'var(--t-text)' }}>{agent?.name || 'Agent'}</div>
-          <div className="text-[9px] font-mono uppercase tracking-[0.12em]" style={{ color: agent?.color || 'var(--t-muted)' }}>
+          <div className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--t-text)' }}>{agent?.name || 'Agent'}</div>
+          <div className="text-[9px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: agent?.color || 'var(--t-muted)' }}>
             {agent?.role || 'Advisor'}
           </div>
         </div>
-        <div className="w-2 h-2 rounded-full" style={{
+        <div className="w-1.5 h-1.5 rounded-full" style={{
           background: isThinking ? (agent?.color || 'var(--t-muted)') : '#10b981',
-          opacity: isThinking ? 0.5 : 1
+          boxShadow: isThinking ? 'none' : '0 0 8px #10b981'
         }} />
       </div>
-      {isThinking ? (
-        <DotsLoader color={agent?.color || 'var(--t-muted)'} />
-      ) : isStreaming ? (
-        <StreamingText text={message.text} color="var(--t-text2)" />
-      ) : (
-        <div className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--t-text2)' }}>
-          {message.text}
-        </div>
-      )}
-    </div>
-  );
-}
 
-function ExecutedActions({ actions }) {
-  if (!actions || actions.length === 0) return null;
-  return (
-    <div className="border-b px-5 py-4" style={{ borderColor: 'var(--t-border)', background: 'var(--t-input)' }}>
-      <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle size={14} className="text-green-500" />
-        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-green-500">
-          Actions Executed
-        </span>
-        <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
+      <div className="pl-1">
+        {isThinking ? (
+          <DotsLoader color={agent?.color || 'var(--t-muted)'} />
+        ) : isStreaming ? (
+          <StreamingText text={message.text} />
+        ) : (
+          <div className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium" style={{ color: 'var(--t-text)' }}>
+            {message.text}
+          </div>
+        )}
       </div>
-      <div className="space-y-2">
-        {actions.map((action, i) => {
-          const meta = ACTION_META[action.action] || { icon: '⚡', label: action.action.toUpperCase(), color: 'var(--t-muted)', bg: 'var(--t-hover)' };
-          return (
-            <div key={i} className="flex items-start gap-3 px-3 py-3 border action-card-enter"
-              style={{ borderColor: meta.color, background: meta.bg, borderLeftWidth: '3px', animationDelay: `${i * 150}ms` }}>
-              <span className="text-lg mt-0.5">{meta.icon}</span>
-              <div className="flex-1">
-                <div className="text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: meta.color }}>
-                  {meta.label}
-                </div>
-                <div className="text-[12px] font-mono mt-0.5" style={{ color: 'var(--t-text)' }}>
-                  {action.summary}
-                </div>
-                {action.detail && (
-                  <div className="text-[10px] font-mono mt-1" style={{ color: 'var(--t-muted)' }}>
-                    ↳ {action.detail}
-                  </div>
-                )}
-              </div>
-              <span className="text-[9px] font-mono font-bold px-2 py-0.5 border mt-0.5" style={{ borderColor: meta.color, color: meta.color }}>
-                APPLIED
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
-/**
- * CycleSeparator — divider between old messages and new cycle
- */
-function CycleSeparator({ label }) {
+export default function AgentPanel({ 
+  agentMessages, isDebating, userAdvisory,
+  advisoryText, setAdvisoryText, onAdvisory, 
+  suggestions, showSuggestions, setShowSuggestions 
+}) {
   return (
-    <div className="flex items-center gap-3 px-5 py-2" style={{ background: 'var(--t-hover)' }}>
-      <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
-      <span className="text-[9px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>
-        {label}
-      </span>
-      <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
-    </div>
-  );
-}
-
-export default function AgentPanel({ agentMessages, isDebating, executedActions, previousMessages,
-  userAdvisory, advisoryText, setAdvisoryText, onAdvisory, suggestions, showSuggestions, setShowSuggestions }) {
-
-  // Auto-scroll — only if user is already near bottom (not fighting their scroll)
-  const scrollRef = useRef(null);
-  const [showOldMessages, setShowOldMessages] = useState(false);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (isNearBottom) {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    }
-  }, [agentMessages, executedActions]);
-
-  return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-panel">
       {/* Header */}
-      <div className="tac-panel-header">
+      <div className="tac-panel-header border-b" style={{ borderColor: 'var(--t-border)' }}>
         <span className="flex items-center gap-2">
-          <Brain size={14} /> Agent Council
+          <Brain size={14} className="text-accent" /> Council Deliberation
         </span>
         {isDebating && (
-          <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-green-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Deliberating
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-green-500 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live Stream
           </span>
         )}
       </div>
 
       {/* Advisory banner */}
-      {userAdvisory && (
-        <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--t-border-light)', background: 'var(--t-input)' }}>
-          <div className="text-[9px] font-mono uppercase tracking-[0.12em] mb-1" style={{ color: 'var(--t-muted)' }}>
-            Your Advisory
-          </div>
-          <p className="text-xs italic" style={{ color: 'var(--t-dim)' }}>"{userAdvisory}"</p>
-        </div>
-      )}
-
-      {/* Messages + Actions */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-y">
-        {agentMessages.length === 0 && (!previousMessages || previousMessages.length === 0) && !isDebating ? (
-          <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
-            <div className="w-16 h-16 border-2 border-dashed flex items-center justify-center mb-4"
-              style={{ borderColor: 'var(--t-border)' }}>
-              <Brain size={24} style={{ color: 'var(--t-ghost)' }} />
+      <AnimatePresence>
+        {userAdvisory && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="px-6 py-4 border-b overflow-hidden" 
+            style={{ borderColor: 'var(--t-border)', background: 'rgba(255,255,255,0.03)' }}
+          >
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 flex items-center gap-2" style={{ color: 'var(--t-muted)' }}>
+              <Zap size={10} className="text-orange-500" /> Executive Directive
             </div>
-            <span className="text-sm font-mono text-center px-8" style={{ color: 'var(--t-dim)' }}>
-              Advance the simulation or inject a crisis to trigger the agent council debate.
-            </span>
-          </div>
-        ) : agentMessages.length === 0 && isDebating ? (
-          <div className="flex flex-col items-center justify-center py-12" style={{ color: 'var(--t-ghost)' }}>
-            <div className="dots-loader mb-3" style={{ color: '#10b981' }}><span /><span /><span /></div>
-            <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Council convening...</span>
-          </div>
-        ) : (<>
-          {/* Previous cycle messages (collapsible) */}
-          {previousMessages && previousMessages.length > 0 && (
-            <>
-              <button
-                onClick={() => setShowOldMessages(!showOldMessages)}
-                className="w-full flex items-center gap-2 px-5 py-2 transition-colors hover:bg-white/5"
-                style={{ background: 'var(--t-hover)' }}>
-                <ChevronDown size={12} className={`transition-transform ${showOldMessages ? 'rotate-180' : ''}`}
-                  style={{ color: 'var(--t-muted)' }} />
-                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--t-muted)' }}>
-                  Previous Council Session ({previousMessages.length} messages)
-                </span>
-                <div className="flex-1 h-px" style={{ background: 'var(--t-border)' }} />
-              </button>
-              {showOldMessages && (
-                <div style={{ opacity: 0.6 }}>
-                  {previousMessages.map((msg, idx) => (
-                    <AgentMessage key={`prev-${msg.agentId}-${idx}`} agentId={msg.agentId} message={msg} isStreaming={false} />
-                  ))}
-                </div>
-              )}
-              <CycleSeparator label="Current Session" />
-            </>
-          )}
+            <p className="text-sm font-bold italic" style={{ color: 'var(--t-text)' }}>"{userAdvisory}"</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Current cycle messages */}
-          {agentMessages.map((msg, idx) => {
-            const isLast = idx === agentMessages.length - 1;
-            const streaming = isDebating && isLast && msg.text !== 'thinking';
-            return (
-              <AgentMessage
-                key={msg.agentId}
-                agentId={msg.agentId}
-                message={msg}
-                isStreaming={streaming}
-              />
-            );
-          })}
-          <ExecutedActions actions={executedActions} />
-        </>)}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto scroll-y p-6">
+        {agentMessages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center opacity-20">
+            <MessageSquare size={48} className="mb-4" />
+            <span className="text-[11px] font-black uppercase tracking-[0.3em]">Awaiting Transmission</span>
+          </div>
+        ) : (
+          <div className="max-w-2xl mx-auto w-full">
+            {agentMessages.map((msg, idx) => {
+              const isLast = idx === agentMessages.length - 1;
+              const streaming = isDebating && isLast && msg.text !== 'thinking';
+              return (
+                <AgentMessage
+                  key={msg.agentId}
+                  agentId={msg.agentId}
+                  message={msg}
+                  isStreaming={streaming}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Advisory Input */}
-      <div className="border-t px-5 py-3" style={{ borderColor: 'var(--t-border)' }}>
-        <div className="text-[9px] font-mono font-bold uppercase tracking-[0.12em] mb-2 flex items-center gap-1.5" style={{ color: 'var(--t-muted)' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--t-text)' }} /> Advise the Council
+      <div className="border-t p-6 shadow-2xl" style={{ borderColor: 'var(--t-border)', background: 'var(--t-bg)' }}>
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 flex items-center gap-2" style={{ color: 'var(--t-muted)' }}>
+          <Activity size={12} /> Directive Input
         </div>
-        <div className="flex gap-2">
+        
+        <div className="relative group">
           <input
             value={advisoryText || ''}
             onChange={e => setAdvisoryText?.(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && advisoryText?.trim()) { onAdvisory?.(advisoryText.trim()); setAdvisoryText?.(''); } }}
-            placeholder="Type your advisory for the council..."
-            className="flex-1 px-3 py-2 text-xs font-mono border outline-none transition-colors"
-            style={{ background: 'var(--t-input)', borderColor: 'var(--t-border)', color: 'var(--t-text2)' }}
+            placeholder="Broadcast orders to the council..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white outline-none focus:border-accent transition-all pr-14 font-medium"
+            disabled={isDebating}
           />
           <button
             onClick={() => { if (advisoryText?.trim()) { onAdvisory?.(advisoryText.trim()); setAdvisoryText?.(''); } }}
-            disabled={!advisoryText?.trim()}
-            className="tac-btn px-3"
+            disabled={!advisoryText?.trim() || isDebating}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-accent hover:scale-110 disabled:opacity-0 transition-all"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
+            <Send size={18} />
           </button>
         </div>
+
         <button onClick={() => setShowSuggestions?.(!showSuggestions)}
-          className="text-[9px] font-mono uppercase tracking-[0.12em] mt-2 flex items-center gap-1 transition-colors"
+          className="text-[9px] font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2 transition-all hover:text-white"
           style={{ color: 'var(--t-muted)' }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            className={`transition-transform ${showSuggestions ? 'rotate-180' : ''}`}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-          Quick Suggestions
+          <ChevronDown size={12} className={`transition-transform ${showSuggestions ? 'rotate-180' : ''}`} />
+          Tactical Suggestions
         </button>
-        {showSuggestions && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {(suggestions || []).map(s => (
-              <button key={s} onClick={() => onAdvisory?.(s)}
-                className="text-[9px] font-mono px-2 py-1 border transition-all hover:border-white/30"
-                style={{ borderColor: 'var(--t-border)', color: 'var(--t-muted)' }}>{s}</button>
-            ))}
-          </div>
-        )}
+        
+        <AnimatePresence>
+          {showSuggestions && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mt-3 flex flex-wrap gap-2 overflow-hidden"
+            >
+              {(suggestions || []).map(s => (
+                <button key={s} onClick={() => onAdvisory?.(s)} disabled={isDebating}
+                  className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 border rounded-lg transition-all hover:bg-white/5 hover:border-accent"
+                  style={{ borderColor: 'var(--t-border)', color: 'var(--t-muted)' }}>{s}</button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

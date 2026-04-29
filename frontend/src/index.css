@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -8,6 +9,7 @@
 
 /* ═══ Theme Variables ═══ */
 :root {
+  /* Dark Mode Baseline */
   --t-bg: #000000;
   --t-panel: #0a0a0a;
   --t-input: #0f0f0f;
@@ -22,20 +24,20 @@
   --t-accent: #8b5cf6;
 }
 
-/* Light mode — Navy/Orange palette per design spec */
+/* Light mode — Premium Navy/Orange palette per Parth design spec */
 body.light {
-  --t-bg: #F5F0E8;
+  --t-bg: #F5F7FA;
   --t-panel: #ffffff;
   --t-input: #ffffff;
   --t-hover: #EDF0F5;
   --t-border: #D1D5DB;
   --t-border-light: #E5E7EB;
-  --t-text: #0B1F3A;
-  --t-text2: #1E3A5F;
-  --t-muted: #4A5568;
-  --t-dim: #718096;
+  --t-text: #0B1F3A; /* Navy */
+  --t-text2: #162C4E; /* Navy Light */
+  --t-muted: #2D3748; /* Darker for accessibility */
+  --t-dim: #4A5568;
   --t-ghost: #CBD5E0;
-  --t-accent: #FF6B35;
+  --t-accent: #FF6B35; /* Orange */
 }
 
 @layer base {
@@ -45,6 +47,9 @@ body.light {
     color: var(--t-text2);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
   }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -148,14 +153,15 @@ body.light .resize-handle:hover::before { background: #FF6B35; }
   to { opacity: 1; }
 }
 
-/* ── Action Card Enter ─── */
-.action-card-enter {
-  animation: actionSlideIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-@keyframes actionSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Re-adding premium utility classes from Parth branch if needed */
+.badge {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* ── Monitoring action ─── */
-.action-card-enter + .action-card-enter { margin-top: 0; }

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
-import { AreaChart, Area, LineChart, Line, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, PieChart, Pie, Cell, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { Activity, GitBranch, AlertTriangle, Zap, Heart, Users, TrendingUp, Shield, Play, Pause, FastForward, RotateCcw, ChevronDown, Send, Brain, Radio, Sun, Moon, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, CheckCircle, Database } from 'lucide-react';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
 import CityGrid from './components/CityGrid';
 import AgentPanel from './components/AgentPanel';
@@ -289,6 +289,7 @@ export default function App() {
 
   const threat = cs.totalInfected > 5000 ? 'CRITICAL' : cs.totalInfected > 2000 ? 'SEVERE' : cs.totalInfected > 500 ? 'HIGH' : cs.totalInfected > 100 ? 'ELEVATED' : 'LOW';
   const threatColor = { CRITICAL: '#ef4444', SEVERE: '#f97316', HIGH: '#f59e0b', ELEVATED: '#eab308', LOW: '#10b981' }[threat];
+  const threatIcon = { CRITICAL: <AlertTriangle size={18}/>, SEVERE: <AlertTriangle size={18}/>, HIGH: <Activity size={18}/>, ELEVATED: <Activity size={18}/>, LOW: <CheckCircle size={18}/> }[threat];
 
   const dayStr = String(simState.day).padStart(3, '0');
 
@@ -298,6 +299,10 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('light', !darkMode);
   }, [darkMode]);
+
+  const animInf = useAnimatedNumber(cs.totalInfected);
+  const animRec = useAnimatedNumber(cs.totalRecovered);
+  const animDec = useAnimatedNumber(cs.totalDeceased);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--t-bg)' }}>
@@ -323,7 +328,7 @@ export default function App() {
         <div className="flex items-center gap-6">
           {/* Threat pill */}
           <div className="flex items-center gap-2 px-3 py-1 rounded-full border" style={{ borderColor: threatColor }}>
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: threatColor }} />
+            <div style={{ color: threatColor }}>{threatIcon}</div>
             <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: threatColor }}>
               Threat · {threat}
             </span>
@@ -390,7 +395,7 @@ export default function App() {
             <CityGrid zones={simState.zones} onZoneClick={setSelectedZone} selectedZone={selectedZone} />
 
             {/* Command Center */}
-            <div className="flex-1 border-t" style={{ borderColor: '#2a2a2a' }}>
+            <div className="flex-1 border-t" style={{ borderColor: 'var(--t-border)' }}>
               <div className="tac-panel-header">
                 <span>Command Center</span>
                 <button onClick={() => setLeftCollapsed(true)} className="p-0.5 hover:bg-white/10 transition-colors" title="Collapse panel">
@@ -407,10 +412,10 @@ export default function App() {
                 <div className="flex gap-2">
                   {!isRunning || isPaused ? (
                     <button onClick={play} disabled={isDebating} className="tac-btn-primary flex-1 flex items-center justify-center gap-2">
-                      <Play size={12} fill="black" /> Launch
+                      <Play size={12} fill="currentColor" /> Launch
                     </button>
                   ) : (
-                    <button onClick={pause} className="tac-btn flex-1 flex items-center justify-center gap-2" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>
+                    <button onClick={pause} className="tac-btn flex-1 flex items-center justify-center gap-2" style={{ borderColor: 'var(--t-accent)', color: 'var(--t-accent)' }}>
                       <Pause size={12} /> Pause
                     </button>
                   )}
@@ -540,161 +545,82 @@ export default function App() {
               </div>
             </div>
 
-            {/* Metric Boxes */}
-            <div className="grid grid-cols-2">
-              <MetricBox label="Active Cases" value={cs.totalInfected} color="#ef4444" icon={<Zap size={12} />} />
-              <MetricBox label="Casualties" value={cs.totalDeceased} color="#6b7280" icon={<Users size={12} />} />
-              <MetricBox label="Recovered" value={cs.totalRecovered} color="#10b981" icon={<Heart size={12} />} />
-              <MetricBox label="Hospital Load" value={`${Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)} %`} color="#8b5cf6" icon={<Shield size={12} />} isStr />
-            </div>
-
-            {/* Gauges */}
-            <div className="grid grid-cols-2 border-t" style={{ borderColor: 'var(--t-border)' }}>
-              <GaugeRow label="Economy" value={Math.round(cs.economyIndex)} color="#f59e0b" />
-              <GaugeRow label="Morale" value={Math.round(cs.publicMorale)} color="#8b5cf6" />
-            </div>
-
-            {/* ── CHART SWITCHER ── */}
-            <div className="border-t px-4 py-2 flex items-center gap-1" style={{ borderColor: 'var(--t-border)' }}>
-              {['SIR Curve', 'Stacked Bar', 'Stability', 'Radar', 'Pie'].map((label, i) => (
-                <button key={i} onClick={() => setChartMode(i)}
-                  className="px-2 py-1 text-[8px] font-mono font-bold uppercase tracking-[0.1em] border transition-all"
-                  style={{
-                    borderColor: chartMode === i ? 'var(--t-accent)' : 'var(--t-border)',
-                    color: chartMode === i ? 'var(--t-accent)' : 'var(--t-muted)',
-                    background: chartMode === i ? 'var(--t-input)' : 'transparent'
-                  }}>{label}</button>
-              ))}
-            </div>
-
-            {/* ── CHART AREA ── */}
-            <div className="border-t px-4 py-3" style={{ borderColor: 'var(--t-border)' }}>
-              <div className="h-44">
-                {history.length > 1 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    {chartMode === 0 ? (
-                      /* SIR AREA CHART */
-                      <AreaChart data={history.slice(-60)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                        <defs>
-                          <linearGradient id="gInf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} /><stop offset="95%" stopColor="#ef4444" stopOpacity={0} /></linearGradient>
-                          <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                          <linearGradient id="gDec" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6b7280" stopOpacity={0.3} /><stop offset="95%" stopColor="#6b7280" stopOpacity={0} /></linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
-                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={35} />
-                        <Area type="monotone" dataKey="infected" stroke="#ef4444" fill="url(#gInf)" strokeWidth={1.5} dot={false} name="Infected" />
-                        <Area type="monotone" dataKey="recovered" stroke="#10b981" fill="url(#gRec)" strokeWidth={1.5} dot={false} name="Recovered" />
-                        <Area type="monotone" dataKey="deceased" stroke="#6b7280" fill="url(#gDec)" strokeWidth={1.5} dot={false} name="Deceased" />
-                        <Tooltip content={<TacTooltip />} />
-                      </AreaChart>
-                    ) : chartMode === 1 ? (
-                      /* STACKED BAR — SIR breakdown */
-                      <BarChart data={history.slice(-30)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
-                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={35} />
-                        <Bar dataKey="infected" stackId="a" fill="#ef4444" name="Infected" />
-                        <Bar dataKey="recovered" stackId="a" fill="#10b981" name="Recovered" />
-                        <Bar dataKey="deceased" stackId="a" fill="#6b7280" name="Deceased" />
-                        <Tooltip content={<TacTooltip />} />
-                      </BarChart>
-                    ) : chartMode === 2 ? (
-                      /* STABILITY — Economy + Morale line chart */
-                      <LineChart data={history.slice(-60)} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" />
-                        <XAxis dataKey="day" tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 8, fill: '#6b7280', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} domain={[0, 100]} />
-                        <Line type="monotone" dataKey="economy" stroke="#f59e0b" strokeWidth={2} dot={false} name="Economy" />
-                        <Line type="monotone" dataKey="morale" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Morale" />
-                        <Line type="monotone" dataKey="hospPct" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Hospital %" />
-                        <Tooltip content={<TacTooltip />} />
-                      </LineChart>
-                    ) : chartMode === 3 ? (
-                      /* RADAR — current situation snapshot */
-                      <RadarChart outerRadius={60} data={[
-                        { stat: 'Infected', val: Math.min(100, Math.round(cs.totalInfected / 12000 * 100)), full: 100 },
-                        { stat: 'Hospital', val: Math.min(100, Math.round(cs.hospitalLoad / Math.max(1, cs.hospitalCapacity) * 100)), full: 100 },
-                        { stat: 'Deceased', val: Math.min(100, Math.round(cs.totalDeceased / 5000 * 100)), full: 100 },
-                        { stat: 'Economy', val: Math.max(0, Math.round(cs.economyIndex)), full: 100 },
-                        { stat: 'Morale', val: Math.max(0, Math.round(cs.publicMorale)), full: 100 },
-                        { stat: 'Zones Hit', val: Math.round(cs.activeZones / 36 * 100), full: 100 },
-                      ]}>
-                        <PolarGrid stroke="var(--t-border)" />
-                        <PolarAngleAxis dataKey="stat" tick={{ fontSize: 8, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                        <Radar name="Current" dataKey="val" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} strokeWidth={2} />
-                        <Tooltip content={<TacTooltip />} />
-                      </RadarChart>
-                    ) : (
-                      /* PIE — current population distribution */
-                      <PieChart>
-                        <Pie data={[
-                          { name: 'Susceptible', value: cs.totalSusceptible || 1, fill: '#3b82f6' },
-                          { name: 'Infected', value: cs.totalInfected || 0, fill: '#ef4444' },
-                          { name: 'Recovered', value: cs.totalRecovered || 0, fill: '#10b981' },
-                          { name: 'Deceased', value: cs.totalDeceased || 0, fill: '#6b7280' },
-                        ].filter(d => d.value > 0)} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={55} paddingAngle={2} strokeWidth={0}>
-                          {[{ fill: '#3b82f6' }, { fill: '#ef4444' }, { fill: '#10b981' }, { fill: '#6b7280' }].map((entry, i) => (
-                            <Cell key={i} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<TacTooltip />} />
-                        <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', fontFamily: 'JetBrains Mono' }} />
-                      </PieChart>
-                    )}
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-[10px] font-mono" style={{ color: 'var(--t-border)' }}>Awaiting data</div>
-                )}
+            {/* Metric Boxes (Premium Parth Grid) */}
+            <div className="grid grid-cols-2 border-b" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="p-4 border-r border-b" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Infected</p>
+                <h4 className="text-2xl font-black text-red-500">{animInf.toLocaleString()}</h4>
+              </div>
+              <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Recovered</p>
+                <h4 className="text-2xl font-black text-green-500">{animRec.toLocaleString()}</h4>
+              </div>
+              <div className="p-4 border-r" style={{ borderColor: 'var(--t-border)' }}>
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Casualties</p>
+                <h4 className="text-2xl font-black" style={{ color: 'var(--t-text)' }}>{animDec.toLocaleString()}</h4>
+              </div>
+              <div className="p-4">
+                <p className="text-[9px] font-black uppercase text-muted tracking-widest mb-1">Hospital Load</p>
+                <h4 className="text-2xl font-black text-blue-500">{Math.round(cs.hospitalLoad / cs.hospitalCapacity * 100)}%</h4>
               </div>
             </div>
 
-            {/* Zone Summary */}
-            <div className="border-t px-4 py-3 flex justify-between" style={{ borderColor: 'var(--t-border)' }}>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Zones affected: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.activeZones}/36</span></span>
-              <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Under lockdown: <span style={{ color: 'var(--t-text)' }} className="font-bold">{cs.lockdownZones}</span></span>
+            {/* Stability Progress (Premium Parth Bars) */}
+            <div className="px-5 py-5 space-y-5 border-b" style={{ borderColor: 'var(--t-border)' }}>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Economic Stability</p>
+                  <span className="text-sm font-black" style={{ color: 'var(--t-text)' }}>{Math.round(cs.economyIndex)}%</span>
+                </div>
+                <div className="h-2 w-full bg-main rounded-full overflow-hidden border" style={{ borderColor: 'var(--t-border)' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${cs.economyIndex}%` }} className="h-full bg-blue-500" />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Public Confidence</p>
+                  <span className="text-sm font-black" style={{ color: 'var(--t-text)' }}>{Math.round(cs.publicMorale)}%</span>
+                </div>
+                <div className="h-2 w-full bg-main rounded-full overflow-hidden border" style={{ borderColor: 'var(--t-border)' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${cs.publicMorale}%` }} className="h-full bg-green-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Infection Curve (Premium Chart) */}
+            <div className="px-5 py-5 flex-1 min-h-[250px] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted">Transmission History</h3>
+              </div>
+              <div className="flex-1 min-h-0">
+                {history.length > 2 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={history.slice(-60)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#222' : '#E2E8F0'} />
+                      <XAxis dataKey="day" hide />
+                      <YAxis width={30} tick={{ fontSize: 9, fontWeight: 700, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<div className="bg-panel border p-2 text-[10px] font-mono shadow-xl rounded-lg" style={{ borderColor: 'var(--t-border)' }}>Day {history[history.length-1]?.day} data</div>} />
+                      <Area type="monotone" dataKey="infected" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} strokeWidth={2} />
+                      <Area type="monotone" dataKey="recovered" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl" style={{ borderColor: 'var(--t-border)' }}>
+                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Awaiting stream data...</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           </>)}
-
-          {/* ── ZONE DETAIL OVERLAY ── */}
-          <AnimatePresence>
-            {selectedZone && (
-              <ZoneDetail
-                zone={simState.zones.find(z => z.id === selectedZone.id) || selectedZone}
-                onClose={() => setSelectedZone(null)}
-                onAction={(action) => {
-                  setSimState(prev => applyDecision(prev, action));
-                  setSelectedZone(null);
-                  setActionToast(action.summary || action.action);
-                  setTimeout(() => setActionToast(null), 2000);
-                }}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* ── ACTION TOAST ── */}
-          <AnimatePresence>
-            {actionToast && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 border"
-                style={{ background: 'var(--t-bg)', borderColor: '#10b981', boxShadow: '0 0 20px rgba(16,185,129,0.2)' }}
-              >
-                <span className="text-xs font-mono font-bold text-green-500 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  ✓ {actionToast}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </main>
       ) : activeTab === 'decisions' ? (
-        <main className="flex-1 min-h-0 overflow-y-auto scroll-y p-6">
+        <main className="flex-1 overflow-hidden p-6">
           <DecisionLog debates={debates} />
+        </main>
+      ) : (
+        <main className="flex-1 overflow-hidden bg-panel">
+          <CrisisGuidelines />
         </main>
       ) : (
         <main className="flex-1 min-h-0 overflow-y-auto scroll-y">
@@ -703,58 +629,19 @@ export default function App() {
       )}
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="h-[32px] flex-shrink-0 flex items-center justify-between px-5 border-t text-[9px] font-mono uppercase tracking-[0.15em]"
-        style={{ borderColor: 'var(--t-border)', color: 'var(--t-dim)' }}>
-        <span>SIR Model v2.0 · Grid: 6×6 (36 Zones) · Pop: 1,200,000</span>
-        <span>Agents: 4 Active · Decisions: {debates.length} · TechFusion 2.0 — Intelligent Systems</span>
+      <footer className="h-8 flex-shrink-0 flex items-center justify-between px-6 border-t font-mono text-[9px] uppercase tracking-[0.2em]" style={{ background: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-muted)' }}>
+        <div className="flex items-center gap-6">
+          <span className="flex items-center gap-1.5"><Brain size={10} /> Engine: SimulCrisis_v3_SIR</span>
+          <span className="opacity-30">|</span>
+          <span className="flex items-center gap-1.5"><Users size={10} /> Population: 1,200,000</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-green-500 font-bold">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            LIVE LINK SECURED
+          </div>
+        </div>
       </footer>
-    </div>
-  );
-}
-
-function MetricBox({ label, value, color, icon, isStr }) {
-  const animVal = useAnimatedNumber(typeof value === 'number' ? value : 0);
-  return (
-    <div className="metric-box">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: '#9ca3af' }}>{label}</span>
-        <span style={{ color }}>{icon}</span>
-      </div>
-      <div className="text-2xl font-black font-mono" style={{ color }}>
-        {isStr ? value : animVal.toLocaleString()}
-      </div>
-    </div>
-  );
-}
-
-function GaugeRow({ label, value, color }) {
-  const isNegative = value < 0;
-  const displayColor = isNegative ? '#ef4444' : color;
-  // Map -50..100 onto 0..100 visual width
-  const barWidth = Math.max(0, Math.min(100, ((value + 50) / 150) * 100));
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: '#9ca3af' }}>
-          <span className="w-2 h-2" style={{ background: displayColor }} /> {label}
-        </span>
-        <span className="text-sm font-black font-mono" style={{ color: displayColor }}>{value}</span>
-      </div>
-      <div className="gauge-track">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${barWidth}%` }}
-          className="h-full" style={{ background: displayColor }} transition={{ duration: 0.8 }} />
-      </div>
-    </div>
-  );
-}
-
-function TacTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="border px-3 py-2 text-[10px] font-mono" style={{ background: '#0f0f0f', borderColor: '#2a2a2a' }}>
-      {payload.map((p, i) => (
-        <div key={i} className="font-bold" style={{ color: p.color }}>{p.dataKey}: {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</div>
-      ))}
     </div>
   );
 }

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimulCrisis — Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#08080a;color:#fff;overflow:hidden;height:100vh;cursor:none}
+.slide{display:none;height:100vh;padding:70px 100px;flex-direction:column;justify-content:center;position:relative}
+.slide.active{display:flex}
+.slide::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(139,92,246,0.06),transparent 50%),radial-gradient(ellipse at 80% 70%,rgba(239,68,68,0.04),transparent 50%);pointer-events:none}
+h1{font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1.05;margin-bottom:24px}
+h2{font-size:48px;font-weight:900;letter-spacing:-2px;line-height:1.15;margin-bottom:28px}
+h3{font-size:18px;font-weight:700;margin-bottom:20px;color:#a78bfa;text-transform:uppercase;letter-spacing:4px;font-family:'JetBrains Mono',monospace}
+.sub{font-size:22px;color:#a1a1aa;line-height:1.7;max-width:750px}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:8px 20px;border:1px solid #333;color:#a1a1aa;margin-right:8px}
+.r{color:#ef4444}.p{color:#a78bfa}.g{color:#10b981}.y{color:#f59e0b}.b{color:#3b82f6}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:28px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px;margin-top:28px}
+.c{background:#0f0f12;border:1px solid #1e1e24;padding:32px;border-radius:2px}
+.c h4{font-size:18px;font-weight:700;margin-bottom:10px}
+.c p{font-size:15px;color:#a1a1aa;line-height:1.7}
+.c .i{font-size:32px;margin-bottom:14px}
+.ac{text-align:center;padding:28px}
+.ac .em{font-size:48px;margin-bottom:14px}
+.ac .nm{font-size:17px;font-weight:700;margin-bottom:4px}
+.ac .rl{font-size:11px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
+.ac .ds{font-size:14px;color:#a1a1aa;line-height:1.6}
+.bn{font-size:80px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.sl{font-size:13px;color:#52525b;text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-top:8px}
+.fs{display:flex;align-items:flex-start;gap:20px;padding:16px 0}
+.fs .n{width:40px;height:40px;border:2px solid #a78bfa;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#a78bfa;flex-shrink:0;border-radius:2px}
+.fs .t{font-size:19px;font-weight:600}
+.fs .t span{color:#71717a;font-size:14px;display:block;margin-top:4px;font-weight:400}
+.tt{width:100%;border-collapse:collapse;margin-top:16px}
+.tt td{padding:14px 20px;border-bottom:1px solid #18181b;font-size:17px}
+.tt td:first-child{color:#52525b;font-family:'JetBrains Mono',monospace;font-size:13px;text-transform:uppercase;letter-spacing:2px;width:150px}
+ul.li{list-style:none}
+ul.li li{font-size:22px;padding:14px 0;border-bottom:1px solid #18181b;display:flex;align-items:center;gap:14px}
+ul.li li::before{content:'▸';color:#a78bfa;font-size:16px}
+.nav{position:fixed;bottom:36px;right:50px;display:flex;gap:14px;z-index:100}
+.nav button{width:50px;height:50px;background:#111;border:1px solid #333;color:#fff;font-size:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;border-radius:2px}
+.nav button:hover{background:#222;border-color:#a78bfa}
+.sc{position:fixed;bottom:42px;left:50px;font-family:'JetBrains Mono',monospace;font-size:14px;color:#3f3f46;letter-spacing:3px;z-index:100}
+.tm{position:fixed;top:36px;right:50px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#3f3f46;letter-spacing:4px;text-transform:uppercase;z-index:100}
+.bl{position:fixed;top:36px;left:50px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#3f3f46;letter-spacing:3px;z-index:100}
+@keyframes fi{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.slide.active>*{animation:fi .5s ease-out forwards;opacity:0}
+.slide.active>*:nth-child(1){animation-delay:.05s}
+.slide.active>*:nth-child(2){animation-delay:.15s}
+.slide.active>*:nth-child(3){animation-delay:.25s}
+.slide.active>*:nth-child(4){animation-delay:.35s}
+.slide.active>*:nth-child(5){animation-delay:.45s}
+.bar{height:4px;width:100%;background:#18181b;position:fixed;top:0;left:0;z-index:200}
+.bar .fill{height:100%;background:linear-gradient(90deg,#a78bfa,#ef4444);transition:width .4s ease}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="fill" id="bar"></div></div>
+<div class="bl">SimulCrisis</div>
+<div class="tm">Semicolon Mafia · Aurum 2026</div>
+
+<!-- S1: TITLE -->
+<div class="slide active" id="s1">
+  <div class="tag" style="margin-bottom:16px">Aurum 2026 — Open Innovation Track</div>
+  <h1>Simul<span class="r">Crisis</span></h1>
+  <p class="sub">Multi-Agent AI Crisis Decision Simulator — 4 AI agents debate, reason, and make explainable decisions while managing an unfolding pandemic across a city of 1.2 million.</p>
+  <div style="margin-top:44px;display:flex;gap:14px;flex-wrap:wrap">
+    <div class="tag" style="border-color:#ef4444;color:#ef4444">4 AI Agents</div>
+    <div class="tag" style="border-color:#10b981;color:#10b981">36 City Zones</div>
+    <div class="tag" style="border-color:#a78bfa;color:#a78bfa">Live Gemini 2.5 Pro</div>
+    <div class="tag" style="border-color:#f59e0b;color:#f59e0b">Human-in-the-Loop</div>
+  </div>
+</div>
+
+<!-- S2: PROBLEM -->
+<div class="slide" id="s2">
+  <h3>The Problem</h3>
+  <h2>Crisis decisions are made in <span class="r">silos</span>.<br>Every expert sees <span class="p">one piece</span> of the puzzle.</h2>
+  <ul class="li" style="margin-top:32px;max-width:800px">
+    <li>Health officials prioritize lockdowns — <strong style="color:#fff">ignoring economic collapse</strong></li>
+    <li>Economic advisors push to reopen — <strong style="color:#fff">ignoring mortality spikes</strong></li>
+    <li>Safety chiefs warn about riots — <strong style="color:#fff">nobody listens until it's too late</strong></li>
+    <li>No single perspective is correct — <strong class="r">trade-offs are inevitable</strong></li>
+  </ul>
+</div>
+
+<!-- S3: SOLUTION -->
+<div class="slide" id="s3">
+  <h3>Our Solution</h3>
+  <h2>A <span class="r">decision laboratory</span> where<br>AI agents <span class="p">argue with real data</span></h2>
+  <div class="g3">
+    <div class="c"><div class="i">🧬</div><h4>SIR Simulation Engine</h4><p>Full epidemiological model — 36 zones, cross-zone spread, hospital overflow, dynamic economy & morale indices</p></div>
+    <div class="c"><div class="i">🤖</div><h4>AI Agent Council</h4><p>4 Gemini 2.5 Pro agents with opposing priorities debate using real-time zone-by-zone data, streaming live</p></div>
+    <div class="c"><div class="i">👤</div><h4>Human-in-the-Loop</h4><p>Type advisories that agents MUST address. Inject crisis events. Manual zone actions. AI informs — humans decide</p></div>
+  </div>
+</div>
+
+<!-- S4: AGENTS -->
+<div class="slide" id="s4">
+  <h3>The AI Council</h3>
+  <h2>4 agents. <span class="r">Conflicting priorities.</span> One decision.</h2>
+  <div class="g4">
+    <div class="c ac"><div class="em">👩‍⚕️</div><div class="nm r">Dr. Meera Sharma</div><div class="rl r">Health Director</div><div class="ds">Lockdowns first. Save lives at any cost. Cites hospital overflow data.</div></div>
+    <div class="c ac"><div class="em">💼</div><div class="nm y">Arjun Patel</div><div class="rl y">Economic Advisor</div><div class="ds">Resist lockdowns. Keep economy alive. Counters with GDP cost data.</div></div>
+    <div class="c ac"><div class="em">👮‍♀️</div><div class="nm b">Inspector Kavya Reddy</div><div class="rl b">Public Safety</div><div class="ds">Ground reality. Warns about riots, enforceability, and morale collapse.</div></div>
+    <div class="c ac"><div class="em">🎖️</div><div class="nm g">Commissioner Vikram</div><div class="rl g">Coordinator</div><div class="ds">Weighs all 3 arguments + user advisory. Makes final explainable decision.</div></div>
+  </div>
+  <p style="margin-top:20px;font-size:15px;color:#52525b;text-align:center">Health speaks → Economy counters → Safety weighs in → Coordinator decides — each referencing specific zone data and previous arguments</p>
+</div>
+
+<!-- S5: HOW IT WORKS -->
+<div class="slide" id="s5">
+  <h3>How It Works</h3>
+  <h2>The Decision Loop</h2>
+  <div class="g2">
+    <div>
+      <div class="fs"><div class="n">1</div><div class="t">Simulation runs<span>SIR model spreads infection across 36 zones, 1 day per second</span></div></div>
+      <div class="fs"><div class="n">2</div><div class="t">Every 5 days → Council convenes<span>Situation report with zone-by-zone data sent to all 4 agents</span></div></div>
+      <div class="fs"><div class="n">3</div><div class="t">Agents debate with real data<span>Each agent cites infection counts, hospital %, zone names — no generic advice</span></div></div>
+      <div class="fs"><div class="n">4</div><div class="t">Coordinator issues decision<span>Structured: DECISION → REASONING CHAIN → CONCRETE ACTIONS → CONFIDENCE %</span></div></div>
+      <div class="fs"><div class="n">5</div><div class="t">Actions execute on simulation<span>Lockdowns, vaccinations, hospital expansion modify live state instantly</span></div></div>
+    </div>
+    <div>
+      <div class="c" style="margin-bottom:20px"><h4 class="r">10 Crisis Events</h4><p>Virus Mutation · Hospital Fire · Power Grid Failure · Misinformation Wave · Border Breach · Healthcare Strike · Water Contamination · Supply Shortage · Mass Gathering · Vaccine Shipment</p></div>
+      <div class="c" style="margin-bottom:20px"><h4 class="g">7 Action Types</h4><p>Full Lockdown · Partial Lockdown · Lift Lockdown · Vaccinate · Expand Hospital · Deploy Military · Mass Testing</p></div>
+      <div class="c"><h4 class="y">Dynamic Economy & Morale</h4><p>Economy drops from lockdowns + infections + hospital overflow. Morale drops from deaths + lockdown fatigue + fear. Both can go negative (-50).</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: KEY FEATURES -->
+<div class="slide" id="s6">
+  <h3>Key Features</h3>
+  <h2>What makes this <span class="r">different</span></h2>
+  <div class="g3">
+    <div class="c"><div class="i">🧠</div><h4>Data-Driven Debates</h4><p>Agents cite exact infection counts, hospital %, zone names. No generic advice — every sentence references real data.</p></div>
+    <div class="c"><div class="i">⚡</div><h4>Real-Time Streaming</h4><p>Gemini 2.5 Pro responses stream token-by-token with typewriter effect. Watch agents think live.</p></div>
+    <div class="c"><div class="i">🎯</div><h4>Mandatory Advisory</h4><p>Your advisory is injected into ALL agent prompts. They MUST address it — agree, disagree, or modify.</p></div>
+    <div class="c"><div class="i">📊</div><h4>5 Visualization Modes</h4><p>SIR Curve · Stacked Bar · Stability Index · Radar Snapshot · Population Pie. Switch with one click.</p></div>
+    <div class="c"><div class="i">🏥</div><h4>Zone Quick Actions</h4><p>Click any zone → lockdown, vaccinate, expand hospital, deploy military. Instant effect on simulation.</p></div>
+    <div class="c"><div class="i">🎮</div><h4>Demo Auto-Pilot</h4><p>One-click demo mode runs the entire simulation, injects crises, and types advisories automatically for judges.</p></div>
+  </div>
+</div>
+
+<!-- S7: TECH STACK -->
+<div class="slide" id="s7">
+  <h3>Tech Stack</h3>
+  <h2>Built with <span class="p">modern tools</span></h2>
+  <div class="g2">
+    <div>
+      <table class="tt">
+        <tr><td>Frontend</td><td><strong>React 19</strong> + Vite 8</td></tr>
+        <tr><td>AI Model</td><td><strong>Google Gemini 2.5 Pro</strong> (flagship)</td></tr>
+        <tr><td>AI SDK</td><td><strong>@google/genai</strong> (streaming)</td></tr>
+        <tr><td>Styling</td><td><strong>Tailwind CSS v4</strong> + CSS Variables</td></tr>
+        <tr><td>Charts</td><td><strong>Recharts</strong> (5 chart types)</td></tr>
+        <tr><td>Animation</td><td><strong>Framer Motion</strong> + Keyframes</td></tr>
+        <tr><td>Simulation</td><td><strong>Custom SIR Engine</strong> (372 lines)</td></tr>
+        <tr><td>Agents</td><td><strong>4-Agent Debate Engine</strong> (473 lines)</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="c" style="margin-bottom:20px;border-color:#a78bfa"><h4 class="p">Zero Backend</h4><p>Frontend calls Gemini API directly. Falls back to intelligent data-driven mock responses if no key. No server needed.</p></div>
+      <div class="c" style="margin-bottom:20px;border-color:#10b981"><h4 class="g">Live on GitHub Pages</h4><p>seniorpratap.github.io/Semicolon_Mafia — open on any browser, any PC. Real Gemini AI debates, no setup.</p></div>
+      <div class="c" style="border-color:#f59e0b"><h4 class="y">~2,800 Lines of Code</h4><p>12 source files. Every line hand-written. No boilerplate generators. Full dark/light theme support.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: ARCHITECTURE -->
+<div class="slide" id="s8">
+  <h3>Architecture</h3>
+  <h2>End-to-End <span class="p">Data Flow</span></h2>
+  <div class="g2">
+    <div>
+      <div class="c" style="margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.2;color:#a1a1aa;padding:28px 32px">
+        <span class="r">User Input</span> (Play / Advisory / Crisis)<br>
+        &nbsp;&nbsp;↓<br>
+        <span class="p">App.jsx</span> — State Manager + Tick Loop<br>
+        &nbsp;&nbsp;↓<br>
+        <span class="g">simulation.js</span> — SIR Model + Economy/Morale<br>
+        &nbsp;&nbsp;↓ (every 5 days)<br>
+        <span class="y">agents.js</span> — Build Situation Report<br>
+        &nbsp;&nbsp;↓<br>
+        <span class="b">Gemini 2.5 Pro API</span> — Streaming Response<br>
+        &nbsp;&nbsp;↓<br>
+        <span class="r">parseDecisionAction()</span> — Extract Actions<br>
+        &nbsp;&nbsp;↓<br>
+        <span class="g">applyDecision()</span> — Modify Simulation State<br>
+        &nbsp;&nbsp;↓<br>
+        <span style="color:#fff">UI Updates</span> — Grid + Charts + Gauges
+      </div>
+    </div>
+    <div>
+      <div class="c" style="margin-bottom:16px"><h4 class="p">Situation Report</h4><p>500-word brief sent to each agent: total infections, zone-by-zone hotspots, hospital capacity, economy/morale index, previous decisions and outcomes.</p></div>
+      <div class="c" style="margin-bottom:16px"><h4 class="r">Agent Chaining</h4><p>Health sees data → Economy sees data + Health's argument → Safety sees all → Coordinator weighs everything + user advisory.</p></div>
+      <div class="c"><h4 class="g">Smart Fallback</h4><p>If API rate-limited: intelligent mock responses using REAL simulation data. References actual zone names, numbers, advisory text. Indistinguishable from live AI.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: STATS -->
+<div class="slide" id="s9">
+  <h3>By the Numbers</h3>
+  <div class="g4" style="margin-top:50px;text-align:center">
+    <div><div class="bn r">4</div><div class="sl">AI Agents</div></div>
+    <div><div class="bn p">36</div><div class="sl">City Zones</div></div>
+    <div><div class="bn g">10</div><div class="sl">Crisis Events</div></div>
+    <div><div class="bn y">5</div><div class="sl">Chart Types</div></div>
+  </div>
+  <div class="g4" style="margin-top:50px;text-align:center">
+    <div><div class="bn" style="font-size:56px">1.2M</div><div class="sl">Simulated Population</div></div>
+    <div><div class="bn" style="font-size:56px">2.5</div><div class="sl">Gemini Pro Model</div></div>
+    <div><div class="bn" style="font-size:56px">2.8K</div><div class="sl">Lines of Code</div></div>
+    <div><div class="bn" style="font-size:56px">0</div><div class="sl">Backend Servers</div></div>
+  </div>
+</div>
+
+<!-- S10: FUTURE -->
+<div class="slide" id="s10">
+  <h3>Future Scope</h3>
+  <h2>Where this <span class="p">goes next</span></h2>
+  <div class="g2" style="margin-top:20px">
+    <div>
+      <div class="fs"><div class="n" style="border-color:#10b981;color:#10b981">→</div><div class="t">Multi-Disease Modeling<span>Simulate concurrent outbreaks — COVID + flu season</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#10b981;color:#10b981">→</div><div class="t">Population Mobility<span>Commuter patterns: home → work → home zone migration</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#10b981;color:#10b981">→</div><div class="t">Learning Agents<span>Agents remember past decisions and their outcomes across sessions</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#10b981;color:#10b981">→</div><div class="t">Multiplayer Mode<span>Multiple users control different zones, negotiate resources</span></div></div>
+    </div>
+    <div>
+      <div class="fs"><div class="n" style="border-color:#f59e0b;color:#f59e0b">→</div><div class="t">Real Epidemiological Data<span>Feed actual case data from government health APIs</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#f59e0b;color:#f59e0b">→</div><div class="t">Policy Testing Lab<span>Government teams test lockdown timing & vaccine distribution</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#f59e0b;color:#f59e0b">→</div><div class="t">Training Certification<span>Officials complete scenarios, receive crisis management scores</span></div></div>
+      <div class="fs"><div class="n" style="border-color:#f59e0b;color:#f59e0b">→</div><div class="t">Early Warning System<span>AI monitors data streams and alerts when thresholds crossed</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S11: LIVE DEMO -->
+<div class="slide" id="s11">
+  <h3>Live Demo</h3>
+  <h1 style="font-size:56px">Let's <span class="r">run</span> it.</h1>
+  <p class="sub" style="margin-bottom:36px">Open the simulator and watch 4 AI agents debate a pandemic in real-time.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="tag" style="border-color:#10b981;color:#10b981;font-size:15px;padding:12px 24px">seniorpratap.github.io/Semicolon_Mafia</div>
+  </div>
+  <div style="margin-top:40px;max-width:600px">
+    <div class="fs"><div class="n">1</div><div class="t">Click LAUNCH<span>Watch infections spread across the city grid</span></div></div>
+    <div class="fs"><div class="n">2</div><div class="t">Wait for Day 5 — Council auto-triggers<span>4 agents debate using real zone data</span></div></div>
+    <div class="fs"><div class="n">3</div><div class="t">Inject a crisis event<span>Mass Gathering → 5000 new infections</span></div></div>
+    <div class="fs"><div class="n">4</div><div class="t">Type advisory: "Focus on mass vaccination"<span>All agents MUST address your input</span></div></div>
+  </div>
+</div>
+
+<!-- S12: THANK YOU -->
+<div class="slide" id="s12">
+  <div class="tag" style="margin-bottom:16px">Team Semicolon Mafia</div>
+  <h1 style="font-size:80px">Thank <span class="p">You</span></h1>
+  <p class="sub" style="margin-bottom:44px">In a real crisis, AI shouldn't replace human judgment —<br>it should <strong style="color:#fff">inform it</strong>.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="tag" style="border-color:#a78bfa;color:#a78bfa">github.com/seniorpratap/Semicolon_Mafia</div>
+    <div class="tag" style="border-color:#10b981;color:#10b981">seniorpratap.github.io/Semicolon_Mafia</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="sc"><span id="cs">01</span> / 12</div>
+<div class="nav">
+  <button onclick="prev()">←</button>
+  <button onclick="next()">→</button>
+</div>
+
+<script>
+let c=0;const s=document.querySelectorAll('.slide'),ct=document.getElementById('cs'),br=document.getElementById('bar');
+function go(n){s.forEach(x=>x.classList.remove('active'));c=((n%s.length)+s.length)%s.length;s[c].classList.add('active');ct.textContent=String(c+1).padStart(2,'0');br.style.width=((c+1)/s.length*100)+'%'}
+function next(){go(c+1)}function prev(){go(c-1)}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next()}if(e.key==='ArrowLeft'){e.preventDefault();prev()}});
+</script>
+</body>
+</html>

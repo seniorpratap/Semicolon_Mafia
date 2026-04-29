@@ -81,10 +81,13 @@ export default function App() {
       if (adv) setLatestAdvisory(adv);
       return;
     }
-    // Save current messages as "previous" before clearing
+    // Save current messages as "previous" before clearing — set debating FIRST
     setIsDebating(true); setIsPaused(true);
-    if (agentMessages.length > 0) setPreviousMessages([...agentMessages]);
-    setAgentMessages([]); setExecutedActions([]);
+    // Batch: save previous + clear current in same tick
+    const prevMsgs = agentMessages.length > 0 ? [...agentMessages] : null;
+    if (prevMsgs) setPreviousMessages(prevMsgs);
+    setAgentMessages([]);
+    setExecutedActions([]);
     if (adv) setLatestAdvisory(adv);
     const abortController = new AbortController();
     debateAbortRef.current = abortController;
@@ -608,8 +611,8 @@ export default function App() {
                         { stat: 'Infected', val: Math.min(100, Math.round(cs.totalInfected / 12000 * 100)), full: 100 },
                         { stat: 'Hospital', val: Math.min(100, Math.round(cs.hospitalLoad / Math.max(1, cs.hospitalCapacity) * 100)), full: 100 },
                         { stat: 'Deceased', val: Math.min(100, Math.round(cs.totalDeceased / 5000 * 100)), full: 100 },
-                        { stat: 'Economy', val: Math.round(cs.economyIndex), full: 100 },
-                        { stat: 'Morale', val: Math.round(cs.publicMorale), full: 100 },
+                        { stat: 'Economy', val: Math.max(0, Math.round(cs.economyIndex)), full: 100 },
+                        { stat: 'Morale', val: Math.max(0, Math.round(cs.publicMorale)), full: 100 },
                         { stat: 'Zones Hit', val: Math.round(cs.activeZones / 36 * 100), full: 100 },
                       ]}>
                         <PolarGrid stroke="var(--t-border)" />
@@ -720,17 +723,21 @@ function MetricBox({ label, value, color, icon, isStr }) {
 }
 
 function GaugeRow({ label, value, color }) {
+  const isNegative = value < 0;
+  const displayColor = isNegative ? '#ef4444' : color;
+  // Map -50..100 onto 0..100 visual width
+  const barWidth = Math.max(0, Math.min(100, ((value + 50) / 150) * 100));
   return (
     <div className="px-4 py-3">
       <div className="flex items-center justify-between mb-1.5">
         <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-[0.12em]" style={{ color: '#9ca3af' }}>
-          <span className="w-2 h-2" style={{ background: color }} /> {label}
+          <span className="w-2 h-2" style={{ background: displayColor }} /> {label}
         </span>
-        <span className="text-sm font-black font-mono" style={{ color }}>{value}</span>
+        <span className="text-sm font-black font-mono" style={{ color: displayColor }}>{value}</span>
       </div>
       <div className="gauge-track">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(0, Math.min(100, value))}%` }}
-          className="h-full" style={{ background: color }} transition={{ duration: 0.8 }} />
+        <motion.div initial={{ width: 0 }} animate={{ width: `${barWidth}%` }}
+          className="h-full" style={{ background: displayColor }} transition={{ duration: 0.8 }} />
       </div>
     </div>
   );

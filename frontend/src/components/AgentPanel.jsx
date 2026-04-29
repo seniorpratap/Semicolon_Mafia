@@ -194,7 +194,7 @@ export default function AgentPanel({ agentMessages, isDebating, executedActions,
             </span>
           </div>
         ) : agentMessages.length === 0 && isDebating ? (
-          <div className="h-full flex flex-col items-center justify-center" style={{ color: 'var(--t-ghost)' }}>
+          <div className="flex flex-col items-center justify-center py-12" style={{ color: 'var(--t-ghost)' }}>
             <div className="dots-loader mb-3" style={{ color: '#10b981' }}><span /><span /><span /></div>
             <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Council convening...</span>
           </div>

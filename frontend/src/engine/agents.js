@@ -136,8 +136,8 @@ SUMMARY:
 - Active Infections: ${stats.totalInfected.toLocaleString()} (${infectionRate}% of population)
 - Recovered: ${stats.totalRecovered.toLocaleString()}
 - Deceased: ${stats.totalDeceased.toLocaleString()} (Case Fatality Rate: ${mortalityRate}%)
-- Economy: ${Math.round(stats.economyIndex)}/100 ${stats.economyIndex < 60 ? '⚠️ CRITICAL' : stats.economyIndex < 80 ? '⚠️ DECLINING' : '✅'}
-- Public Morale: ${Math.round(stats.publicMorale)}/100 ${stats.publicMorale < 40 ? '🔴 CIVIL UNREST RISK' : stats.publicMorale < 60 ? '🟡 TENSE' : '🟢'}
+- Economy: ${Math.round(stats.economyIndex)}/100 ${stats.economyIndex < 0 ? '🔴 COLLAPSED' : stats.economyIndex < 60 ? '⚠️ CRITICAL' : stats.economyIndex < 80 ? '⚠️ DECLINING' : '✅'}
+- Public Morale: ${Math.round(stats.publicMorale)}/100 ${stats.publicMorale < 0 ? '🔴 RIOTS IMMINENT' : stats.publicMorale < 40 ? '🔴 CIVIL UNREST RISK' : stats.publicMorale < 60 ? '🟡 TENSE' : '🟢'}
 - Hospital System: ${stats.hospitalLoad}/${stats.hospitalCapacity} beds (${Math.round(stats.hospitalLoad/stats.hospitalCapacity*100)}% occupancy)
 
 ZONE-BY-ZONE HOTSPOTS (worst first):
@@ -163,8 +163,8 @@ ${lockdownZones.length > 0 ? `Currently under lockdown: ${lockdownZones.map(z =>
 function extractStats(report) {
   const infected = report.match(/Active Infections:\s*([\d,]+)/)?.[1] || '0';
   const deceased = report.match(/Deceased:\s*([\d,]+)/)?.[1] || '0';
-  const economy = report.match(/Economy:\s*([\d.]+)/)?.[1] || '100';
-  const morale = report.match(/Public Morale:\s*([\d.]+)/)?.[1] || '100';
+  const economy = report.match(/Economy:\s*(-?[\d.]+)/)?.[1] || '100';
+  const morale = report.match(/Public Morale:\s*(-?[\d.]+)/)?.[1] || '100';
   const hospital = report.match(/Hospital System:\s*(\d+)\/(\d+)/);
   const hospPct = hospital ? Math.round(parseInt(hospital[1]) / parseInt(hospital[2]) * 100) : 0;
   const hotZones = (report.match(/• (.+?):/g) || []).map(z => z.replace('• ', '').replace(':', ''));
@@ -212,20 +212,50 @@ function getMockResponse(agentId, situationReport, otherAgentInputs, userAdvisor
       const healthWeight = severity === 'extreme' ? '0.50' : severity === 'high' ? '0.40' : '0.30';
       const econWeight = econNum < 70 ? '0.30' : '0.20';
       const safetyWeight = moraleNum < 50 ? '0.25' : '0.15';
-      
-      const decision = severity === 'extreme'
-        ? `Full lockdown of ${topZone} and ${secondZone}, emergency hospital expansion, economic relief package for locked zones`
+
+      const advLower = (userAdvisory || '').toLowerCase();
+      const advWantsHospital = advLower.includes('hospital') || advLower.includes('beds') || advLower.includes('capacity');
+      const advWantsVaccine = advLower.includes('vaccin') || advLower.includes('immuniz');
+      const advWantsLockdown = advLower.includes('lockdown') || advLower.includes('quarantine') || advLower.includes('restrict');
+      const advWantsTesting = advLower.includes('test') || advLower.includes('screen');
+      const advWantsEconomy = advLower.includes('economy') || advLower.includes('business') || advLower.includes('open') || advLower.includes('reopen');
+      const advWantsMilitary = advLower.includes('military') || advLower.includes('army') || advLower.includes('force');
+
+      let decision = severity === 'extreme'
+        ? `Full lockdown of ${topZone} and ${secondZone}, emergency hospital expansion, economic relief package`
         : severity === 'high'
-        ? `Targeted lockdown of ${topZone} with partial restrictions in ${secondZone}, accelerated vaccination in all hotspot zones`
-        : `Enhanced monitoring and testing in ${topZone}, preparatory lockdown planning for ${secondZone} if cases double`;
+        ? `Targeted lockdown of ${topZone} with partial restrictions in ${secondZone}, accelerated vaccination`
+        : `Enhanced monitoring and testing in ${topZone}, preparatory lockdown planning for ${secondZone}`;
+
+      if (userAdvisory) {
+        if (advWantsLockdown) decision = `Full lockdown of ${topZone} and ${secondZone} as per advisory, field hospitals in locked zones`;
+        else if (advWantsVaccine) decision = `Mass vaccination drive across ${topZone}, ${secondZone} and adjacent zones — advisory prioritized`;
+        else if (advWantsHospital) decision = `Emergency hospital expansion ALL hospital zones (+200 beds each), field hospitals to ${topZone}`;
+        else if (advWantsTesting) decision = `City-wide mass testing mandate, priority ${topZone} and ${secondZone}, quarantine all positives`;
+        else if (advWantsEconomy) decision = `Lift non-essential lockdowns, open economic corridors in ${secondZone}, targeted quarantine ${topZone} only`;
+        else if (advWantsMilitary) decision = `Deploy military to ${topZone} and ${secondZone} for enforcement and logistics`;
+        else decision += ` — incorporating advisory "${userAdvisory}" into implementation`;
+      }
+
+      let action1 = severity !== 'moderate' ? `Lockdown ${topZone} (${severity === 'extreme' ? 'FULL' : 'PARTIAL'})` : `Deploy mass testing to ${topZone}`;
+      let action2 = 'Emergency hospital capacity +200 beds in nearest hospital zone';
+      let action3 = econNum < 70 ? 'Open economic relief corridor for essential businesses' : 'Accelerated vaccination drive in top 3 hotspot zones';
+
+      if (userAdvisory) {
+        if (advWantsVaccine) { action1 = `Mass vaccination drive in ${topZone} and ${secondZone}`; action3 = 'Accelerated vaccination rollout — all remaining zones within 48hrs'; }
+        if (advWantsHospital) { action2 = 'Emergency hospital expansion: +200 beds ALL hospital zones, deploy 3 field hospitals'; }
+        if (advWantsTesting) { action1 = `Mandatory mass testing in ${topZone}, ${secondZone} and adjacent zones`; }
+        if (advWantsEconomy) { action3 = `Lift lockdown on ${secondZone}, open business corridors, economic relief activated`; }
+        if (advWantsMilitary) { action1 = `Deploy military to ${topZone} for enforcement and supply logistics`; }
+      }
 
       return `**DECISION:** ${decision}
 
 **Why this, not that:**
-- Going with Health's push for containment in ${topZone} because ${s.hospPct}% hospital load leaves no margin for error
-- ${econNum < 70 ? `PARTIALLY accepting Economy's objection — opening relief corridor to limit economic damage` : `Overriding Economy's preference for minimal intervention — the infection trajectory demands stronger action`}
-- Incorporating Safety's 48hr communication window — we announce today, enforce in 48 hours
-${userAdvisory ? `- User advisory "${userAdvisory}" — ${severity === 'extreme' ? 'noted but containment takes priority over fine-tuning right now' : 'incorporating this into the implementation framework'}` : '- No external advisory received this cycle'}
+- Going with Health's push for containment in ${topZone} because ${s.hospPct}% hospital load leaves no margin
+- ${econNum < 70 ? `PARTIALLY accepting Economy's objection — opening relief corridor` : `Overriding Economy's preference for minimal intervention — infection trajectory demands action`}
+- Incorporating Safety's 48hr communication window — announce today, enforce in 48 hours
+${userAdvisory ? `- **ACCEPTING user advisory** "${userAdvisory}" — incorporated directly into the action plan below` : '- No external advisory received this cycle'}
 
 **Reasoning Chain:**
 1. Health (weight: ${healthWeight}) — ${s.infected} active cases, hospitals at ${s.hospPct}%, ${severity === 'extreme' ? 'demands immediate maximum intervention' : 'requires proactive but measured response'}
@@ -233,13 +263,13 @@ ${userAdvisory ? `- User advisory "${userAdvisory}" — ${severity === 'extreme'
 3. Safety (weight: ${safetyWeight}) — Morale at ${s.morale}/100, ${moraleNum < 50 ? 'civil unrest risk HIGH — communication critical' : 'public cooperation expected with proper messaging'}
 
 **Concrete Actions (next 5 days):**
-- Action 1: ${severity !== 'moderate' ? `Lockdown ${topZone} (${severity === 'extreme' ? 'FULL' : 'PARTIAL'})` : `Deploy mass testing to ${topZone}`}
-- Action 2: Emergency hospital capacity +200 beds in nearest hospital zone
-- Action 3: ${econNum < 70 ? 'Open economic relief corridor for essential businesses' : 'Accelerated vaccination drive in top 3 hotspot zones'}
+- Action 1: ${action1}
+- Action 2: ${action2}
+- Action 3: ${action3}
 
-**Confidence:** ${severity === 'extreme' ? '91' : severity === 'high' ? '78' : '65'}% — ${severity === 'extreme' ? 'High confidence because the data leaves no room for half-measures' : 'Moderate confidence — situation could evolve either way'}
+**Confidence:** ${severity === 'extreme' ? '91' : severity === 'high' ? '78' : '65'}% — ${severity === 'extreme' ? 'High confidence' : 'Moderate confidence — situation could evolve'}
 
-**If I'm wrong:** ${severity === 'extreme' ? 'If lockdown fails to bend the curve in 5 days, we escalate to military-assisted enforcement and mandatory evacuation of overwhelmed hospital zones' : 'If cases double despite intervention, we immediately escalate to full lockdown with no further debate'}`;
+**If I'm wrong:** ${severity === 'extreme' ? 'Escalate to military-assisted enforcement and mandatory evacuation of overwhelmed zones' : 'Immediately escalate to full lockdown with no further debate'}`;
     },
   };
 

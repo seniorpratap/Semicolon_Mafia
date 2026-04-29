@@ -10,7 +10,7 @@ import ZoneDetail from './components/ZoneDetail';
 import ResizeHandle from './components/ResizeHandle';
 import CrisisGuidelines from './components/CrisisGuidelines';
 
-import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS } from './engine/simulation';
+import { createSimState, advanceDay, applyDecision, getStats, CRISIS_EVENTS, seedRandomOutbreak } from './engine/simulation';
 import { runAgentDebate, parseDecisionAction } from './engine/agents';
 import { isGeminiReady } from './services/gemini';
 import { useAnimatedNumber } from './hooks/useEffects';
@@ -122,11 +122,12 @@ export default function App() {
   triggerDebateRef.current = triggerDebate;
 
   const handleAdvance = useCallback(async () => {
-    let s = simState; for (let i = 0; i < 5; i++) s = advanceDay(s);
+    let s = simState.outbreakSeeded ? simState : seedRandomOutbreak(simState);
+    for (let i = 0; i < 5; i++) s = advanceDay(s);
     setSimState(s); setTimeout(() => triggerDebate(), 300);
   }, [simState, triggerDebate]);
 
-  const play = () => { setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
+  const play = () => { if (!simState.outbreakSeeded) setSimState(p => seedRandomOutbreak(p)); setIsRunning(true); setIsPaused(false); if (simState.day === 0) tick(); };
   const pause = () => setIsPaused(true);
   const crisis = (e) => {
     setSimState(p => e.apply(p));
@@ -173,6 +174,7 @@ export default function App() {
     try {
       // Phase 1: Start simulation
       setDemoStep('Initializing simulation...');
+      setSimState(p => seedRandomOutbreak(p));
       setIsRunning(true); setIsPaused(false);
       await sleep(2000);
       if (!demoRef.current) return;

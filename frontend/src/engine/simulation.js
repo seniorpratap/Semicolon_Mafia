@@ -61,10 +61,7 @@ export function seedOutbreak(zones, zoneId = 2, initialInfected = 150) {
 // ─── Simulation State ─────────────────────────────────────
 export function createSimState() {
   const zones = createCity(6);
-  // Randomize Patient Zero: random zone, random initial cases (80-250)
-  const patientZeroZone = Math.floor(Math.random() * 36);
-  const initialCases = 80 + Math.floor(Math.random() * 171);
-  seedOutbreak(zones, patientZeroZone, initialCases);
+  // Start clean — no infections until user presses Launch/Demo
 
   return {
     zones,
@@ -79,7 +76,18 @@ export function createSimState() {
     events: [],
     paused: false,
     speed: 1,
+    outbreakSeeded: false,
   };
+}
+
+// ─── Seed random outbreak (called on Launch/Demo) ─────────
+export function seedRandomOutbreak(state) {
+  if (state.outbreakSeeded) return state;
+  const zones = state.zones.map(z => ({ ...z }));
+  const patientZeroZone = Math.floor(Math.random() * 36);
+  const initialCases = 80 + Math.floor(Math.random() * 171);
+  seedOutbreak(zones, patientZeroZone, initialCases);
+  return { ...state, zones, outbreakSeeded: true };
 }
 
 // ─── Compute Effective R0 for a Zone ──────────────────────

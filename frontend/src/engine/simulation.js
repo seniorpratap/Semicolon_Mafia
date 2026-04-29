@@ -61,7 +61,10 @@ export function seedOutbreak(zones, zoneId = 2, initialInfected = 150) {
 // ─── Simulation State ─────────────────────────────────────
 export function createSimState() {
   const zones = createCity(6);
-  seedOutbreak(zones, 2, 150);
+  // Randomize Patient Zero: random zone, random initial cases (80-250)
+  const patientZeroZone = Math.floor(Math.random() * 36);
+  const initialCases = 80 + Math.floor(Math.random() * 171);
+  seedOutbreak(zones, patientZeroZone, initialCases);
 
   return {
     zones,
